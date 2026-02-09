@@ -22,7 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { UserPlus } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";

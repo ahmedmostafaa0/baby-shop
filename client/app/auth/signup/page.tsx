@@ -5,7 +5,6 @@ import useAuth from "@/hooks/useAuth";
 
 const SignUpPage = () => {
 
-
   return (
     <div className="p-5 md:p-10">
       <div className="max-w-2xl mx-auto bg-babyshopWhite p-5 md:p-10 flex flex-col items-center rounded-md border shadow">
