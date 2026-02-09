@@ -4,6 +4,7 @@ import {
   loginUser,
   getUserProfile,
   logoutUser,
+  refreshAccessToken
 } from "../controllers/auth";
 import { protect } from "../middlewares/auth";
 
@@ -16,5 +17,8 @@ router.post("/login", loginUser);
 router.get("/profile", protect, getUserProfile);
 
 router.post("/logout", logoutUser);
+
+router.post("/refresh", refreshAccessToken);
+
 
 export default router;

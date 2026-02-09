@@ -21,7 +21,7 @@ const protect = asyncHandler(
           res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           });
           res.status(401);
           throw new Error("Authentication failed. User not found.");
@@ -40,7 +40,7 @@ const protect = asyncHandler(
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
       res.status(401);
       throw new Error("No session. Please login again.");
@@ -58,14 +58,13 @@ const protect = asyncHandler(
         res.clearCookie("refreshToken", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         });
         res.status(401);
         throw new Error("Invalid session. Please login again.");
       }
 
-      const { accessToken: newAccess } =
-        generateTokens(user.id);
+      const { accessToken: newAccess } = generateTokens(user.id);
 
       res.setHeader("x-access-token", newAccess);
 
@@ -75,7 +74,7 @@ const protect = asyncHandler(
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
       res.status(401);
       throw new Error("Session expired. Please login again.");

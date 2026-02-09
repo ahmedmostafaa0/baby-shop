@@ -1,5 +1,9 @@
 import useAuthStore from "@/store/useAuthStore";
-import axios, { type AxiosInstance, type AxiosResponse } from "axios";
+import axios, { type AxiosError, type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 interface AdminApiConfig {
   baseURL: string;
@@ -45,6 +49,20 @@ const createApiInstance = (): AxiosInstance => {
     },
   );
 
+  let isRefreshing = false;
+  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void; config: any; }[] = [];
+
+  const processQueue = (error: AxiosError | null, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+      if (error) {
+        prom.reject(error);
+      } else {
+        prom.resolve(token);
+      }
+    });
+    failedQueue = [];
+  };
+
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
       const newAccessToken = response.headers["x-access-token"];
@@ -53,7 +71,47 @@ const createApiInstance = (): AxiosInstance => {
       }
       return response;
     },
-    (error) => {
+    async (error: AxiosError) => {
+      const originalRequest = error.config as CustomAxiosRequestConfig;
+
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        if (isRefreshing) {
+          return new Promise(function(resolve, reject) {
+            failedQueue.push({ resolve, reject, config: originalRequest });
+          }).then(token => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return axios(originalRequest);
+          }).catch(err => {
+            return Promise.reject(err);
+          });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        return new Promise(async (resolve, reject) => {
+          try {
+            const { data } = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+            const newAccessToken = data.accessToken;
+            useAuthStore.getState().setToken(newAccessToken);
+            instance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+            originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
+            processQueue(null, newAccessToken);
+            resolve(axios(originalRequest));
+          } catch (refreshError) {
+            processQueue(refreshError as AxiosError);
+            useAuthStore.getState().clearAuth();
+            const publicPaths = ["/login", "/register"];
+            if (!publicPaths.includes(location.pathname)) {
+              location.href = "/login";
+            }
+            reject(refreshError);
+          } finally {
+            isRefreshing = false;
+          }
+        });
+      }
+
       if (error.code === "ERR_NETWORK") {
         console.error(
           "Network Error: Unable to connect to the server. Please check if the server is running",
@@ -61,8 +119,6 @@ const createApiInstance = (): AxiosInstance => {
       }
       if (error.response?.status === 401) {
         useAuthStore.getState().clearAuth();
-        
-        // Only redirect if we are NOT already on login or register pages
         const publicPaths = ["/login", "/register"];
         if (!publicPaths.includes(location.pathname)) {
           location.href = "/login";

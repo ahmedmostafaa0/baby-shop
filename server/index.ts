@@ -49,6 +49,7 @@ app.use(
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ['x-access-token']
   }),
 );
 app.use(cookieParser());

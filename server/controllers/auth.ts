@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import User from "../models/User";
 import generateTokens from "../utils/generateToken";
+import  jwt, { JwtPayload } from 'jsonwebtoken';
 
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
   // #swagger.security = []
@@ -27,7 +28,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     maxAge: 30 * 24 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
   });
 
   res.status(201).json({
@@ -56,7 +57,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
   res.json({
@@ -112,7 +113,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
     secure: process.env.NODE_ENV === "production",
   });
 
@@ -121,4 +122,55 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-export { registerUser, loginUser, getUserProfile, logoutUser };
+const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
+  // #swagger.tags = ["Auth"]
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+    res.status(401);
+    throw new Error("No session. Please login again.");
+  }
+
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET as string,
+    ) as JwtPayload;
+
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user || user.refreshToken !== refreshToken) {
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
+      res.status(401);
+      throw new Error("Invalid session. Please login again.");
+    }
+
+    const { accessToken: newAccess } = generateTokens(user.id);
+
+    res.setHeader("x-access-token", newAccess);
+
+    res.json({
+      message: "Token refreshed successfully",
+      accessToken: newAccess,
+    });
+  } catch (error) {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+    res.status(401);
+    throw new Error("Session expired. Please login again.");
+  }
+});
+
+export { registerUser, loginUser, getUserProfile, logoutUser, refreshAccessToken };
