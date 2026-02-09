@@ -74,7 +74,9 @@ app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-  console.log("BabyShop API Server is running!");
-});
+// const PORT = process.env.PORT || 8000;
+// app.listen(PORT, () => {
+//   console.log("BabyShop API Server is running!");
+// });
+
+export default app;
