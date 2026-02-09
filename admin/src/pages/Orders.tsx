@@ -61,7 +61,6 @@ const Orders = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
-
   const fetchOrders = async () => {
     setLoading(true);
     try {

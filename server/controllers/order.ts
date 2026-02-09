@@ -27,48 +27,68 @@ const getAllOrdersAdmin = asyncHandler(async (req: Request, res: Response) => {
     .skip(skip)
     .limit(perPage);
 
-  const transformedOrders = orders.map((order) => {
-    const user = order.userId as IUser;
-    return {
-      _id: order._id,
-      orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-      items: order.items.map((item) => {
-        return {
-          product: {
-            _id: item.productId._id,
-            name: item.productId.name,
-            price: item.productId.price,
-            image: item.productId.image,
-          },
-          quantity: item.quantity,
-          price: item.price,
-        };
-      }),
-      totalAmount: order.total,
-      status: order.status,
-      paymentStatus:
-        order.status === "paid" || order.status === "completed"
-          ? "paid"
-          : order.status === "cancelled"
-            ? "failed"
-            : "pending",
+const transformedOrders = orders.map((order) => {
+  const user = order.userId as IUser | null;
 
-      shippingAddress: order.shippingAddress || {
-        street: "N/A",
-        city: "N/A",
-        state: "N/A",
-        zipCode: "N/A",
-        country: "N/A",
-      },
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-    };
-  });
+  return {
+    _id: order._id,
+    orderId: `ORD-${order._id.toString().slice(-6).toUpperCase()}`,
+    user: user
+      ? {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        }
+      : {
+          _id: "deleted",
+          name: "Deleted User",
+          email: "N/A",
+        },
+
+    items: order.items.map((item) => {
+      const product = item.productId as any;
+
+      return {
+        product: product
+          ? {
+              _id: product._id,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+            }
+          : {
+              _id: "deleted",
+              name: "Deleted Product",
+              price: 0,
+              image: "",
+            },
+        quantity: item.quantity,
+        price: item.price,
+      };
+    }),
+
+    totalAmount: order.total,
+    status: order.status,
+    paymentStatus:
+      order.status === "paid" || order.status === "completed"
+        ? "paid"
+        : order.status === "cancelled"
+        ? "failed"
+        : "pending",
+
+    shippingAddress: order.shippingAddress || {
+      street: "N/A",
+      city: "N/A",
+      state: "N/A",
+      zipCode: "N/A",
+      country: "N/A",
+    },
+
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  };
+});
+
 
   res.json({
     orders: transformedOrders,

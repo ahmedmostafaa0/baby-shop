@@ -27,7 +27,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     maxAge: 30 * 24 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
   });
 
   res.status(201).json({
@@ -56,7 +56,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
+    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
   res.json({
@@ -112,7 +112,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
 
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
 
