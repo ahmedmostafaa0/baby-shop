@@ -1,0 +1,42 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Server for baby-shop project",
+  "main": "dist/index.js",
+  "author": "Ahmed_mostafa",
+  "license": "ISC",
+  "scripts": {
+    "dev": "nodemon --exec ts-node --files index.ts",
+    "build": "tsc",
+    "swagger": "node utils/swagger.ts"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-async-handler": "^1.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.3",
+    "multer": "^2.0.2",
+    "nodemailer": "^7.0.12",
+    "stripe": "^20.3.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.0.8",
+    "@types/nodemailer": "^7.0.5",
+    "@types/swagger-ui-express": "^4.1.8",
+    "swagger-autogen": "^2.23.7",
+    "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
