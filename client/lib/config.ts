@@ -73,14 +73,16 @@ const createApiInstance = (): AxiosInstance => {
     },
     async (error: AxiosError) => {
       const originalRequest = error.config as CustomAxiosRequestConfig;
-
+      if (!originalRequest) {
+        return Promise.reject(error);
+      }
       if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
           return new Promise(function(resolve, reject) {
             failedQueue.push({ resolve, reject, config: originalRequest });
           }).then(token => {
             originalRequest.headers["Authorization"] = "Bearer " + token;
-            return axios(originalRequest);
+            return instance(originalRequest);
           }).catch(err => {
             return Promise.reject(err);
           });
@@ -97,7 +99,7 @@ const createApiInstance = (): AxiosInstance => {
             instance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
             originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
             processQueue(null, newAccessToken);
-            resolve(axios(originalRequest));
+            resolve(instance(originalRequest));
           } catch (refreshError) {
             processQueue(refreshError as AxiosError);
             useAuth.getState().clearAuth();

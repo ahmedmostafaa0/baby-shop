@@ -33,14 +33,8 @@ type FormData = z.infer<typeof loginSchema>;
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, checkIsAdmin, isAuthenticated, isRestoring, restoreAuth } = useAuthStore();
+  const { login, checkIsAdmin } = useAuthStore();
 
-  useEffect(() => {
-    // If not authenticated and not currently restoring, try to restore once
-    if (!isAuthenticated && isRestoring) {
-      restoreAuth();
-    }
-  }, [isAuthenticated, isRestoring, restoreAuth]);
   const form = useForm<FormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {

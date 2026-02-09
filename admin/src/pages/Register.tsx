@@ -33,13 +33,9 @@ type formData = z.infer<typeof registerSchema>;
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { register, checkIsAdmin, isAuthenticated, isRestoring, restoreAuth } = useAuthStore();
+  const { register, checkIsAdmin } = useAuthStore();
 
-  useEffect(() => {
-    if (!isAuthenticated && isRestoring) {
-      restoreAuth();
-    }
-  }, [isAuthenticated, isRestoring, restoreAuth]);
+
 
   const form = useForm<formData>({
     resolver: zodResolver(registerSchema),

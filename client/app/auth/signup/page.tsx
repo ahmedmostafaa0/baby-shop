@@ -4,13 +4,7 @@ import { useEffect } from "react";
 import useAuth from "@/hooks/useAuth";
 
 const SignUpPage = () => {
-    const {isAuthenticated, isRestoring, restoreAuth } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated && isRestoring) {
-      restoreAuth();
-    }
-  }, [isAuthenticated, isRestoring, restoreAuth]);
 
   return (
     <div className="p-5 md:p-10">
