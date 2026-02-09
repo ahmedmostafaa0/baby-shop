@@ -53,30 +53,21 @@ const createApiInstance = (): AxiosInstance => {
       }
       return response;
     },
-    async (error) => {
-      const originalRequest = error.config;
+    (error) => {
       if (error.code === "ERR_NETWORK") {
         console.error(
           "Network Error: Unable to connect to the server. Please check if the server is running",
         );
       }
-          if (
-      error.response?.status === 401 &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-
-      try {
-        const res = await instance.get("/auth/profile");
-        return instance(originalRequest);
-      } catch (err) {
+      if (error.response?.status === 401) {
         useAuth.getState().clearAuth();
-        location.href = "/login";
+        
+        const publicPaths = ["/auth/signin", "/auth/signup"];
+        if (!publicPaths.includes(location.pathname)) {
+          location.href = "/auth/signin";
+        }
       }
-    }
-
-    return Promise.reject(error);
-
+      return Promise.reject(error);
     },
   );
   return instance;
