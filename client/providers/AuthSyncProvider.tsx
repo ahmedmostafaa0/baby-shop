@@ -13,7 +13,7 @@ export default function AuthSyncProvider({
 }) {
   const { isAuthenticated } = useAuth();
   const loadCart = useCartStore((s) => s.loadCart);
-  const clearCart = useCartStore((s) => s.clearLocalCart);
+  const clearCart = useCartStore((s) => s.clearCart);
   const loadWishlist = useWishlistStore((s) => s.loadWishlist);
   const clearWishlist = useWishlistStore((s) => s.clearLocalWishlist);
   const loadOrder = useOrderStore((s) => s.loadOrders);
