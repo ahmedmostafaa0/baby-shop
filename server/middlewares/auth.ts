@@ -27,14 +27,7 @@ const protect = asyncHandler(
 
       req.user = user;
       next();
-    } catch (err: any) {
-      if (err.name === "TokenExpiredError") {
-        res.status(401);
-        throw new Error("Access token expired");
-      }
-
-      res.status(401);
-      throw new Error("Invalid access token");
+    } catch {
     }
   },
 );
