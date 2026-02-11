@@ -1,38 +1,44 @@
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import asyncHandler from "express-async-handler";
-import generateTokens from "../utils/generateToken";
 import type { NextFunction, Request, Response } from "express";
 import User from "../models/User";
 
 const protect = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    let accessToken = req.headers.authorization?.split(" ")[1];
+    const accessToken = req.headers.authorization?.split(" ")[1];
 
     if (!accessToken) {
       res.status(401);
-      throw new Error("Not authorized");
+      throw new Error("No access token provided");
     }
-    const decoded = jwt.verify(
-      accessToken,
-      process.env.JWT_ACCESS_SECRET as string,
-    ) as JwtPayload;
 
-    const user = await User.findById(decoded.id).select("-password");
+    try {
+      const decoded = jwt.verify(
+        accessToken,
+        process.env.JWT_ACCESS_SECRET as string,
+      ) as JwtPayload;
 
-    if (!user) {
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      });
+      const user = await User.findById(decoded.id).select("-password");
+
+      if (!user) {
+        res.status(401);
+        throw new Error("User not found");
+      }
+
+      req.user = user;
+      next();
+    } catch (err: any) {
+      if (err.name === "TokenExpiredError") {
+        res.status(401);
+        throw new Error("Access token expired");
+      }
+
       res.status(401);
-      throw new Error("Authentication failed. User not found.");
+      throw new Error("Invalid access token");
     }
-
-    req.user = user;
-    return next();
   },
 );
+
 
 const admin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user && req.user.role === "admin") {
