@@ -2,9 +2,6 @@ import ShopPageClient from "@/components/common/ShopPageClient";
 import api from "@/lib/config";
 import { Category } from "@/types/types";
 
-interface CategoriesResponse {
-  categories: Category[];
-}
 
 const ShopPageServer = async () => {
   const {data} = await api.get("/brands");
