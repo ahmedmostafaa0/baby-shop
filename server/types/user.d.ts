@@ -18,7 +18,6 @@ export interface IUser extends Document {
   role?: "user" | "admin" | "deliveryman";
   refreshToken?: string | null;
   addresses: Types.DocumentArray<Address>;
-  wishlist: Array<Types.ObjectId | IProduct>;
   cart: ICartItem[];
   matchPassword(password: string): Promise<boolean>;
   createdAt?: Date;

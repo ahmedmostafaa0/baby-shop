@@ -54,7 +54,7 @@ const ProductDetails = async ({
               className="w-14"
             />
 
-            {/* Product Actions (Name, Wishlist, Quantity, Add to Cart) */}
+            {/* Product Actions (Name, Quantity, Add to Cart) */}
             <ProductActions product={product} />
 
             {/* price view */}

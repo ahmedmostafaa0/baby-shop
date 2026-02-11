@@ -163,14 +163,6 @@ const LeftSideBar = ({isOpen, onClose}: iAppProps) => {
                     <span>My Orders</span>
                   </Link>
                   <Link
-                    href="/user/wishlist"
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
-                    onClick={onClose}
-                  >
-                    <Heart size={18} />
-                    <span>My Wishlist</span>
-                  </Link>
-                  <Link
                     href="/user/cart"
                     className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
                     onClick={onClose}
@@ -183,7 +175,7 @@ const LeftSideBar = ({isOpen, onClose}: iAppProps) => {
             ) : (
               <div className="mb-6">
                 <p className="text-gray-600 mb-4">
-                  Access your account to view orders and wishlist
+                  Access your account to view orders
                 </p>
               </div>
             )}

@@ -27,11 +27,6 @@ const ProductCard = ({ product }: { product: Product }) => {
         />
       </Link>
 
-      {/* Wishlist Button */}
-      {/* <div className="absolute top-2 right-2 z-10">
-        <WishlistButton product={product} className="bg-white shadow-sm" />
-      </div> */}
-
       <hr />
       <div className="px-4 py-2 space-y-1">
         <p className="uppercase text-xs font-medium text-babyshopTextLight">

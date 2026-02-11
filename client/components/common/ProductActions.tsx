@@ -21,7 +21,7 @@ const ProductActions: React.FC<ProductActionsProps> = ({ product }) => {
 
   return (
     <>
-      {/* Product name with wishlist button */}
+      {/* Product name */}
       <div className="flex items-center justify-between gap-5">
         <h1 className="text-2xl font-bold line-clamp-1">{product?.name}</h1>
         <div className="flex items-center gap-2">
