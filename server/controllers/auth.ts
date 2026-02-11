@@ -156,7 +156,6 @@ const refreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
 
     const { accessToken: newAccess } = generateTokens(user.id);
 
-    res.setHeader("x-access-token", newAccess);
 
     res.json({
       message: "Token refreshed successfully",

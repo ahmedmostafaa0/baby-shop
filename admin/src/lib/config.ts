@@ -65,7 +65,7 @@ const createApiInstance = (): AxiosInstance => {
 
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      const newAccessToken = response.headers["x-access-token"];
+      const newAccessToken = response.data?.accessToken;
       if (newAccessToken) {
         useAuthStore.getState().setToken(newAccessToken);
       }

@@ -8,77 +8,29 @@ const protect = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     let accessToken = req.headers.authorization?.split(" ")[1];
 
-    if (accessToken) {
-      try {
-        const decoded = jwt.verify(
-          accessToken,
-          process.env.JWT_ACCESS_SECRET as string,
-        ) as JwtPayload;
-
-        const user = await User.findById(decoded.id).select("-password");
-
-        if (!user) {
-          res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-          });
-          res.status(401);
-          throw new Error("Authentication failed. User not found.");
-        }
-
-        req.user = user;
-        return next();
-      } catch (err) {
-        // accessToken = undefined
-      }
+    if (!accessToken) {
+      res.status(401);
+      throw new Error("Not authorized");
     }
+    const decoded = jwt.verify(
+      accessToken,
+      process.env.JWT_ACCESS_SECRET as string,
+    ) as JwtPayload;
 
-    const refreshToken = req.cookies?.refreshToken;
+    const user = await User.findById(decoded.id).select("-password");
 
-    if (!refreshToken) {
+    if (!user) {
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
       res.status(401);
-      throw new Error("No session. Please login again.");
+      throw new Error("Authentication failed. User not found.");
     }
 
-    try {
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.JWT_REFRESH_SECRET as string,
-      ) as JwtPayload;
-
-      const user = await User.findById(decoded.id).select("-password");
-
-      if (!user || user.refreshToken !== refreshToken) {
-        res.clearCookie("refreshToken", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        });
-        res.status(401);
-        throw new Error("Invalid session. Please login again.");
-      }
-
-      const { accessToken: newAccess } = generateTokens(user.id);
-
-      res.setHeader("x-access-token", newAccess);
-
-      req.user = user;
-      next();
-    } catch (error) {
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      });
-      res.status(401);
-      throw new Error("Session expired. Please login again.");
-    }
+    req.user = user;
+    return next();
   },
 );
 
