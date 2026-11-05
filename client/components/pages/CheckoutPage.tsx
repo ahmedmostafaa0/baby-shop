@@ -81,7 +81,7 @@ const CheckoutPageContent = () => {
               name: item.productId.name,
               price: item.productId.price,
               quantity: item.quantity,
-              image: item.productId.image,
+              image: item.productId.image[0] || "",
             })),
             total: currentItems.reduce(
               (total, item) => total + item.productId.price * item.quantity,
@@ -335,7 +335,7 @@ const CheckoutPageContent = () => {
                   <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                     {item.image ? (
                       <Image
-                        src={item.image[0]}
+                        src={item.image}
                         alt={item.name}
                         fill
                         className="object-cover"
