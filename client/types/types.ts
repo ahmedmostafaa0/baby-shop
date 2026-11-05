@@ -106,9 +106,5 @@ export interface StripeCheckoutItem {
 }
 
 export interface CheckoutSessionRequest {
-  items: StripeCheckoutItem[];
-  successUrl: string;
-  cancelUrl: string;
-  customerEmail?: string;
-  metadata?: Record<string, string>;
+  orderId: string;
 }
