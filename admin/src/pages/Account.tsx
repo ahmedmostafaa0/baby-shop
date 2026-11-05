@@ -182,7 +182,7 @@ const AccountPage = () => {
   }
 
   // Prepare chart data
-  const monthlyData = analyticsData.sales.monthlyRevenue.map((item: any) => ({
+  const monthlyData = analyticsData.sales.monthlyRevenue.map((item) => ({
     month: `${item._id.month}/${item._id.year}`,
     revenue: item.revenue,
     orders: item.orders,
@@ -450,7 +450,7 @@ const AccountPage = () => {
           <Card className="p-6 bg-white border-0 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Recent Orders</h2>
             <div className="space-y-3">
-              {analyticsData.sales.recentOrders.slice(0, 5).map((order: any) => (
+              {analyticsData.sales.recentOrders.slice(0, 5).map((order) => (
                 <div
                   key={order._id}
                   className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
@@ -498,7 +498,7 @@ const AccountPage = () => {
               <AlertTriangle className="w-5 h-5 text-yellow-600" />
             </div>
             <div className="space-y-2">
-              {analyticsData.inventory.lowStockProducts.slice(0, 5).map((product: any) => (
+              {analyticsData.inventory.lowStockProducts.slice(0, 5).map((product) => (
                 <div
                   key={product._id}
                   className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200"
