@@ -99,6 +99,39 @@ export interface Order {
   updatedAt: Date;
 }
 
+export interface MonthlyRevenueItem {
+  _id: { month: number; year: number };
+  revenue: number;
+  orders: number;
+}
+
+export interface OrderStatusBreakdownItem {
+  _id: string;
+  count: number;
+  totalValue: number;
+}
+
+export interface BestSellingProductItem {
+  productName: string;
+  totalSold: number;
+  totalRevenue: number;
+}
+
+export interface RecentOrderItem {
+  _id: string;
+  userId?: { name?: string } | null;
+  createdAt: string | Date;
+  total: number;
+  status: string;
+}
+
+export interface InventoryProductItem {
+  _id: string;
+  name: string;
+  price: number;
+  stock: number;
+}
+
 export interface AnalyticsData {
   overview: {
     totalProducts: number;
@@ -107,15 +140,15 @@ export interface AnalyticsData {
     totalRevenue: number;
   };
   inventory: {
-    lowStockProducts: any[];
-    outOfStockProducts: any[];
+    lowStockProducts: InventoryProductItem[];
+    outOfStockProducts: InventoryProductItem[];
     lowStockCount: number;
     outOfStockCount: number;
   };
   sales: {
-    bestSellingProducts: any[];
-    recentOrders: any[];
-    monthlyRevenue: any[];
-    orderStatusBreakdown: any[];
+    bestSellingProducts: BestSellingProductItem[];
+    recentOrders: RecentOrderItem[];
+    monthlyRevenue: MonthlyRevenueItem[];
+    orderStatusBreakdown: OrderStatusBreakdownItem[];
   };
 }
