@@ -198,9 +198,10 @@ const CheckoutPageContent = () => {
       }
 
       // The server loads the authoritative order and calculates every amount.
-      const result = await createCheckoutSession({
-        orderId: finalOrder._id,
-      });
+      const result = await createCheckoutSession(
+        { orderId: finalOrder._id },
+        useAuth.getState().token,
+      );
 
       if ("url" in result) {
         location.href = result.url;
