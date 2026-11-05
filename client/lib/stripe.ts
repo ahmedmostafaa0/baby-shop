@@ -1,4 +1,5 @@
 import { CheckoutSessionRequest } from "@/types/types";
+import useAuth from "@/hooks/useAuth";
 
 export const createCheckoutSession = async (
   data: CheckoutSessionRequest
@@ -8,6 +9,7 @@ export const createCheckoutSession = async (
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(useAuth.getState().token ? { Authorization: `Bearer ${useAuth.getState().token}` } : {}),
       },
       body: JSON.stringify(data),
     });
