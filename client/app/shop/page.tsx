@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import ShopPageClient from "@/components/common/ShopPageClient";
 import api from "@/lib/config";
 import { Category } from "@/types/types";
