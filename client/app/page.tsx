@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Container from "@/components/common/Container";
 import BabyTravelSection from "@/components/pages/home/BabyTravelSection";
 import Banner from "@/components/pages/home/Banner";
