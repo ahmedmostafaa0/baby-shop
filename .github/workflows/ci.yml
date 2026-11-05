@@ -45,6 +45,8 @@ jobs:
         env:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
           NEXT_PUBLIC_API_ENDPOINT: http://localhost:5000/api
+          NEXT_PUBLIC_API_URL: http://localhost:5000
+          NEXT_PUBLIC_APP_ENV: development
           STRIPE_SECRET_KEY: sk_test_ci_placeholder
           STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
           STRIPE_WEBHOOK_SYNC_SECRET: ci_placeholder_secret
