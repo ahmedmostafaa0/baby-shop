@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
 
+# Audits production and development dependency trees so tooling issues remain visible.
 jobs:
   audit:
     name: npm audit (${{ matrix.app }})
