@@ -163,7 +163,7 @@ const Register = () => {
                 <FormField
                   control={form.control}
                   name="role"
-                  render={({}) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel>Role</FormLabel>
                       <FormControl>
