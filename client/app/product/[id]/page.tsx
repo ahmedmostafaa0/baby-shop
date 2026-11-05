@@ -16,10 +16,8 @@ const ProductDetails = async ({
 }: {
   params: Promise<{ id: string }>;
 }) => {
-  let product: Product;
   const { id } = await params;
-  const {data} = await api.get(`/products/${id}`);
-  product = data
+  const { data: product } = await api.get<Product>(`/products/${id}`);
   const discountedPrice =
     product?.price * (1 - product?.discountPercentage / 100);
 
