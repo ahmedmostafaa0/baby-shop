@@ -1,8 +1,6 @@
 name: Dependency Remediation
 
 on:
-  push:
-    branches: [chore/portfolio-hardening]
   workflow_dispatch:
 
 permissions:
