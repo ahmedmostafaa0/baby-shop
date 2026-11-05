@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: '2026-01-28.clover',
-});
-
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
-
 export async function POST(request: NextRequest) {
   try {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!stripeSecretKey || !endpointSecret) {
+      console.error("Stripe webhook environment is not configured");
+      return NextResponse.json({ error: "Webhook is not configured" }, { status: 500 });
+    }
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2026-01-28.clover",
+    });
     const body = await request.text();
     const headersList = await headers();
     const sig = headersList.get("stripe-signature");
@@ -42,6 +45,11 @@ export async function POST(request: NextRequest) {
 
         // Get the order ID from metadata
         const orderId = session.metadata?.orderId;
+
+        if (session.payment_status !== "paid") {
+          console.log("Checkout session completed without a paid payment status");
+          break;
+        }
 
         if (orderId) {
           try {
@@ -87,6 +95,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           console.error("Webhook: No orderId found in Stripe session metadata");
+          return NextResponse.json({ error: "Missing order ID in Stripe metadata" }, { status: 400 });
         }
         break;
 
