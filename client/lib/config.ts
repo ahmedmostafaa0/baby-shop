@@ -50,7 +50,7 @@ const createApiInstance = (): AxiosInstance => {
   );
 
   let isRefreshing = false;
-  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void; config: any; }[] = [];
+  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }[] = [];
 
   const processQueue = (error: AxiosError | null, token: string | null = null) => {
     failedQueue.forEach(prom => {
