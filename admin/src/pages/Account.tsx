@@ -189,7 +189,7 @@ const AccountPage = () => {
   }));
 
   const orderStatusData = analyticsData.sales.orderStatusBreakdown.map(
-    (item: any) => ({
+    (item) => ({
       name: item._id.charAt(0).toUpperCase() + item._id.slice(1),
       value: item.count,
       revenue: item.totalValue,
@@ -198,7 +198,7 @@ const AccountPage = () => {
 
   const bestSellingData = analyticsData.sales.bestSellingProducts
     .slice(0, 5)
-    .map((item: any) => ({
+    .map((item) => ({
       name: item.productName,
       sold: item.totalSold,
       revenue: item.totalRevenue,
@@ -537,7 +537,7 @@ const AccountPage = () => {
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div className="space-y-2">
-              {analyticsData.inventory.outOfStockProducts.slice(0, 5).map((product: any) => (
+              {analyticsData.inventory.outOfStockProducts.slice(0, 5).map((product) => (
                 <div
                   key={product._id}
                   className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
