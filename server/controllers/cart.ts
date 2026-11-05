@@ -60,7 +60,7 @@ const addItemToCart = asyncHandler(async (req: Request, res: Response) => {
   );
 
   const nextQuantity = (index !== -1 ? cart.items[index]!.quantity : 0) + parsedQuantity;
-  if (nextQuantity > product.stock) {
+  if (nextQuantity > (product.stock ?? 0)) {
     res.status(400);
     throw new Error("Requested quantity exceeds available stock");
   }
@@ -109,7 +109,7 @@ const updateCartItem = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Product not found");
   }
-  if (parsedQuantity > product.stock) {
+  if (parsedQuantity > (product.stock ?? 0)) {
     res.status(400);
     throw new Error("Requested quantity exceeds available stock");
   }
