@@ -248,6 +248,7 @@ ADMIN_URL=http://localhost:5173
 #### Client (`.env.local` in `/client`)
 
 ```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SERVER_URL=http://localhost:5000
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
