@@ -144,7 +144,7 @@ const createOrderFromCart = asyncHandler(
           res.status(404);
           throw new Error("One or more products could not be found");
         }
-        if (quantity > product.stock) {
+        if (quantity > (product.stock ?? 0)) {
           res.status(400);
           throw new Error(`Requested quantity for ${product.name} exceeds available stock`);
         }
@@ -158,7 +158,7 @@ const createOrderFromCart = asyncHandler(
           name: product.name,
           price: discountedPrice,
           quantity,
-          image: product.image[0] || "",
+          image: Array.isArray(product.image) ? product.image[0] || "" : product.image || "",
         };
       }),
     );
