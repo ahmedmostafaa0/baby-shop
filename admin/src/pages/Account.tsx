@@ -35,7 +35,6 @@ import { api } from "@/lib/config";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import AccountSkeleton from "@/components/skeletons/AccountSkeleton";
 import type { AnalyticsData } from "@/lib/types";
@@ -68,46 +67,51 @@ const AccountPage = () => {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportCSV = () => {
     if (!analyticsData) return;
 
-    const workbook = XLSX.utils.book_new();
-
-    const overviewData = [
+    const rows: (string | number)[][] = [
       ["Metric", "Value"],
       ["Total Revenue", analyticsData.overview.totalRevenue],
       ["Total Orders", analyticsData.overview.totalOrders],
       ["Total Products", analyticsData.overview.totalProducts],
       ["Total Users", analyticsData.overview.totalUsers],
-    ];
-    const overviewSheet = XLSX.utils.aoa_to_sheet(overviewData);
-    XLSX.utils.book_append_sheet(workbook, overviewSheet, "Overview");
-
-    // Best Selling Products sheet
-    if (analyticsData.sales.bestSellingProducts.length > 0) {
-      const productsData = [
-        ["Product Name", "Total Sold", "Total Revenue"],
-        ...analyticsData.sales.bestSellingProducts.map((p) => [
-          p.productName,
-          p.totalSold,
-          p.totalRevenue,
-        ]),
-      ];
-      const productsSheet = XLSX.utils.aoa_to_sheet(productsData);
-      XLSX.utils.book_append_sheet(workbook, productsSheet, "Best Sellers");
-    }
-
-    // Inventory Alerts sheet
-    const inventoryData = [
+      [],
+      ["Product Name", "Total Sold", "Total Revenue"],
+      ...analyticsData.sales.bestSellingProducts.map((product) => [
+        product.productName,
+        product.totalSold,
+        product.totalRevenue,
+      ]),
+      [],
       ["Alert Type", "Count"],
       ["Low Stock", analyticsData.inventory.lowStockCount],
       ["Out of Stock", analyticsData.inventory.outOfStockCount],
     ];
-    const inventorySheet = XLSX.utils.aoa_to_sheet(inventoryData);
-    XLSX.utils.book_append_sheet(workbook, inventorySheet, "Inventory");
 
-    XLSX.writeFile(workbook, `analytics-report-${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast.success("Report exported to Excel");
+    const csv = rows
+      .map((row) =>
+        row
+          .map((value) => {
+            const cell = String(value ?? "");
+            return `"${cell.replace(/"/g, '""')}"`;
+          })
+          .join(","),
+      )
+      .join("\\r\\n");
+
+    const blob = new Blob(["\\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `analytics-report-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Report exported to CSV");
   };
 
   const handleExportPDF = () => {
@@ -230,11 +234,11 @@ const AccountPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportExcel}
+              onClick={handleExportCSV}
               className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Export Excel
+              Export CSV
             </Button>
             <Button
               variant="outline"
