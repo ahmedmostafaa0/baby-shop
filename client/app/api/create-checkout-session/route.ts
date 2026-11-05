@@ -1,61 +1,139 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2026-01-28.clover",
-});
-
-interface CheckoutItem {
-  name: string;
-  description?: string;
-  amount: number; // amount in cents
-  currency: string;
-  quantity: number;
-  images?: string[];
+interface CheckoutSummary {
+  orderId: string;
+  status: "pending";
+  total: number;
+  customerEmail?: string;
+  items: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+  }>;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { items, successUrl, cancelUrl, customerEmail, metadata } =
-      await request.json();
+    const { orderId } = await request.json();
 
-    if (!items || items.length === 0) {
+    if (typeof orderId !== "string" || !/^[a-f\\d]{24}$/i.test(orderId)) {
+      return NextResponse.json({ error: "A valid order ID is required" }, { status: 400 });
+    }
+
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const syncSecret = process.env.STRIPE_WEBHOOK_SYNC_SECRET;
+    if (!stripeSecretKey || !syncSecret) {
+      console.error("Stripe checkout environment is not fully configured");
+      return NextResponse.json({ error: "Checkout is not configured" }, { status: 500 });
+    }
+
+    const apiEndpoint =
+      process.env.API_ENDPOINT ||
+      process.env.NEXT_PUBLIC_API_ENDPOINT ||
+      "http://localhost:5000/api";
+
+    const summaryResponse = await fetch(
+      `${apiEndpoint}/orders/${orderId}/checkout-summary`,
+      {
+        method: "GET",
+        headers: { "x-webhook-secret": syncSecret },
+        cache: "no-store",
+      },
+    );
+
+    if (!summaryResponse.ok) {
+      const status = summaryResponse.status === 404 ? 404 : 400;
       return NextResponse.json(
-        { error: "No items provided" },
-        { status: 400 }
+        { error: "Unable to retrieve this order for checkout" },
+        { status },
       );
     }
 
-    const lineItems = items.map((item: CheckoutItem) => ({
-      price_data: {
-        currency: item.currency || "usd",
-        product_data: {
-          name: item.name,
-          description: item.description,
-          images: item.images || [],
+    const summary = (await summaryResponse.json()) as CheckoutSummary;
+    if (
+      summary.status !== "pending" ||
+      !Array.isArray(summary.items) ||
+      summary.items.length === 0 ||
+      !Number.isFinite(summary.total) ||
+      summary.total <= 0
+    ) {
+      return NextResponse.json({ error: "This order cannot be checked out" }, { status: 400 });
+    }
+
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = summary.items.map((item) => {
+      if (
+        !item.name ||
+        !Number.isFinite(item.price) ||
+        item.price <= 0 ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1
+      ) {
+        throw new Error("Order contains invalid item data");
+      }
+
+      return {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.name,
+            ...(item.image ? { images: [item.image] } : {}),
+          },
+          unit_amount: Math.round(item.price * 100),
         },
-        unit_amount: item.amount,
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
+
+    const shipping = summary.total > 100 ? 0 : 15;
+    const tax = Number((summary.total * 0.08).toFixed(2));
+
+    if (shipping > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Shipping", description: "Standard shipping" },
+          unit_amount: Math.round(shipping * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    if (tax > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Tax" },
+          unit_amount: Math.round(tax * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    const origin = request.nextUrl.origin;
+    const encodedOrderId = encodeURIComponent(orderId);
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2026-01-28.clover",
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: customerEmail,
-      metadata: metadata || {},
+      success_url: `${origin}/success?orderId=${encodedOrderId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cancel?orderId=${encodedOrderId}`,
+      ...(summary.customerEmail ? { customer_email: summary.customerEmail } : {}),
+      metadata: { orderId },
       billing_address_collection: "auto",
     });
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Stripe error:", error);
+    console.error("Stripe checkout error:", error);
     return NextResponse.json(
       { error: "Failed to create checkout session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
