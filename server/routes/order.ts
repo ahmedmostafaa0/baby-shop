@@ -10,7 +10,7 @@ router.get('/admin', protect, admin, getAllOrdersAdmin)
 router.get('/', protect, getOrders)
 router.post('/', protect, createOrderFromCart)
 
-router.get('/:id/checkout-summary', webhookAuth, getCheckoutSummary)
+router.get('/:id/checkout-summary', protect, getCheckoutSummary)
 router.get('/:id', protect, getOrderById)
 router.delete('/:id', protect, admin, deleteOrder)
 
