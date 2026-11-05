@@ -36,7 +36,15 @@ const addItemToCart = asyncHandler(async (req: Request, res: Response) => {
   }
   const userId = req.user._id;
 
-  if (!productId) throw new Error("Product ID required");
+  if (!productId) {
+    res.status(400);
+    throw new Error("Product ID required");
+  }
+  const parsedQuantity = Number(quantity);
+  if (!Number.isSafeInteger(parsedQuantity) || parsedQuantity < 1) {
+    res.status(400);
+    throw new Error("Quantity must be a positive integer");
+  }
 
   const product = await Product.findById(productId);
   if (!product) throw new Error("Product not found");
@@ -51,13 +59,16 @@ const addItemToCart = asyncHandler(async (req: Request, res: Response) => {
     (item) => item.productId.toString() === productId
   );
 
+  const nextQuantity = (index !== -1 ? cart.items[index]!.quantity : 0) + parsedQuantity;
+  if (nextQuantity > product.stock) {
+    res.status(400);
+    throw new Error("Requested quantity exceeds available stock");
+  }
+
   if (index !== -1) {
-    cart.items[index]!.quantity += Number(quantity);
+    cart.items[index]!.quantity = nextQuantity;
   } else {
-    cart.items.push({
-      productId,
-      quantity: Number(quantity),
-    });
+    cart.items.push({ productId, quantity: parsedQuantity });
   }
 
   await cart.save();
@@ -78,6 +89,11 @@ const updateCartItem = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user._id;
   const { quantity } = req.body;
   const { productId } = req.params;
+  const parsedQuantity = Number(quantity);
+  if (!Number.isSafeInteger(parsedQuantity) || parsedQuantity < 1) {
+    res.status(400);
+    throw new Error("Quantity must be a positive integer");
+  }
 
   const cart = await Cart.findOne({ userId });
   if (!cart) throw new Error("Cart not found");
@@ -88,11 +104,17 @@ const updateCartItem = asyncHandler(async (req: Request, res: Response) => {
 
   if (index === -1) throw new Error("Item not found");
 
-  if (Number(quantity) < 1) {
-    cart.items.splice(index, 1);
-  } else {
-    cart.items[index]!.quantity = Number(quantity);
+  const product = await Product.findById(productId);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
   }
+  if (parsedQuantity > product.stock) {
+    res.status(400);
+    throw new Error("Requested quantity exceeds available stock");
+  }
+
+  cart.items[index]!.quantity = parsedQuantity;
 
   await cart.save();
   await cart.populate("items.productId");
