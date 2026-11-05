@@ -158,7 +158,7 @@ const createOrderFromCart = asyncHandler(
           name: product.name,
           price: discountedPrice,
           quantity,
-          image: Array.isArray(product.image) ? product.image[0] || "" : product.image || "",
+          image: product.image[0] || "",
         };
       }),
     );
