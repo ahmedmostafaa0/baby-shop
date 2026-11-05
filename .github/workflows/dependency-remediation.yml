@@ -1,0 +1,62 @@
+name: Dependency Remediation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/portfolio-hardening
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply non-breaking security updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in server client admin; do
+            echo "=== Updating $app ==="
+            (cd "$app" && npm ci && (npm audit fix || true))
+          done
+          # The app pins Next.js exactly, so update it explicitly to the patched
+          # release identified by npm audit, keeping Next and its ESLint config aligned.
+          cd client
+          npm install next@16.4.5 eslint-config-next@16.4.5
+          cd ../admin
+          # xlsx is not imported anywhere in the admin source. Remove the vulnerable,
+          # unused dependency rather than retaining an unpatched npm-registry release.
+          npm uninstall xlsx
+      - name: Build and lint all workspaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd server && npm ci && npm run build)
+          (cd client && npm ci && npm run lint && npm run build)
+          (cd admin && npm ci && npm run lint && npm run build)
+      - name: Commit dependency updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/package.json server/package-lock.json client/package.json client/package-lock.json admin/package.json admin/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No dependency changes to commit."
+            exit 0
+          fi
+          git commit -m "fix: remediate vulnerable dependencies"
+          git push origin chore/portfolio-hardening
+      - name: Report remaining advisories
+        if: always()
+        shell: bash
+        run: |
+          for app in server client admin; do
+            echo "=== Remaining audit findings: $app ==="
+            (cd "$app" && npm audit --omit=dev || true)
+          done
