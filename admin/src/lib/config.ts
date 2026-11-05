@@ -79,7 +79,7 @@ const createApiInstance = (): AxiosInstance => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
           return new Promise(function(resolve, reject) {
-            failedQueue.push({ resolve, reject, config: originalRequest });
+            failedQueue.push({ resolve, reject });
           }).then(token => {
             originalRequest.headers["Authorization"] = "Bearer " + token;
             return instance(originalRequest);
