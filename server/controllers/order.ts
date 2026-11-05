@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import Order from "../models/Order";
+import Product from "../models/Product";
 import { IUser } from "../types/user";
 
 interface Update {
@@ -126,18 +127,41 @@ const createOrderFromCart = asyncHandler(
       );
     }
 
-    const validateItems = items.map((item) => {
-      if (!item._id || !item.name || !item.price || !item.quantity) {
-        res.status(400);
-        throw new Error("Invalid item structure");
-      }
-      return {
-        productId: item._id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-      };
-    });
+    const validateItems = await Promise.all(
+      items.map(async (item: { _id?: string; quantity?: number }) => {
+        const quantity = Number(item.quantity);
+        if (
+          !item._id ||
+          !Number.isSafeInteger(quantity) ||
+          quantity < 1
+        ) {
+          res.status(400);
+          throw new Error("Each order item requires a valid product ID and positive integer quantity");
+        }
+
+        const product = await Product.findById(item._id);
+        if (!product) {
+          res.status(404);
+          throw new Error("One or more products could not be found");
+        }
+        if (quantity > product.stock) {
+          res.status(400);
+          throw new Error(`Requested quantity for ${product.name} exceeds available stock`);
+        }
+
+        const discountedPrice = Number(
+          (product.price * (1 - (product.discountPercentage || 0) / 100)).toFixed(2),
+        );
+
+        return {
+          productId: product._id,
+          name: product.name,
+          price: discountedPrice,
+          quantity,
+          image: product.image[0] || "",
+        };
+      }),
+    );
 
     const total = validateItems.reduce(
       (acc, item) => acc + item.price * item.quantity,
