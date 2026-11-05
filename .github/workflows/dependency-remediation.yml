@@ -31,9 +31,9 @@ jobs:
           cd client
           npm install next@16.4.5 eslint-config-next@16.4.5
           cd ../admin
-          # xlsx is not imported anywhere in the admin source. Remove the vulnerable,
-          # unused dependency rather than retaining an unpatched npm-registry release.
-          npm uninstall xlsx
+          # npm's xlsx package is stuck at vulnerable 0.18.5. Install the
+          # patched SheetJS release from its official CDN instead.
+          npm install --save https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
       - name: Build and lint all workspaces
         shell: bash
         run: |
