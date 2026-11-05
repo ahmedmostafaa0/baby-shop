@@ -183,6 +183,32 @@ const createOrderFromCart = asyncHandler(
   },
 );
 
+const getCheckoutSummary = asyncHandler(async (req: Request, res: Response) => {
+  const order = await Order.findById(req.params.id).populate("userId", "email");
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+  if (order.status !== "pending") {
+    res.status(409);
+    throw new Error("Only pending orders can be checked out");
+  }
+
+  const user = order.userId as IUser | null;
+  res.json({
+    orderId: order._id,
+    status: order.status,
+    total: order.total,
+    items: order.items.map((item) => ({
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      image: item.image,
+    })),
+    customerEmail: user?.email,
+  });
+});
+
 const getOrderById = asyncHandler(async (req: Request, res: Response) => {
   const order = await Order.findById(req.params.id)
   if (!order) {
@@ -283,6 +309,7 @@ export {
   getOrders,
   createOrderFromCart,
   getOrderById,
+  getCheckoutSummary,
   deleteOrder,
   updateOrderStatus,
 };
