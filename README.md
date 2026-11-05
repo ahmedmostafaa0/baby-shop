@@ -255,6 +255,8 @@ STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 STRIPE_WEBHOOK_SYNC_SECRET=use_the_same_random_secret_as_server
 NEXT_PUBLIC_API_ENDPOINT=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_APP_ENV=development
 ```
 
 #### Admin (`.env` in `/admin`)
