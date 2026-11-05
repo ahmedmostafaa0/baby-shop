@@ -21,7 +21,7 @@ export interface IProduct extends Document {
   ratings: IProductRating[];
   averageRating?: number;
 
-  image: string;
+  image: string[];
   category: Types.ObjectId | ICategory;
   brand: Types.ObjectId | IBrand;
 
