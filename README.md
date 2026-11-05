@@ -215,9 +215,10 @@ Create `.env` files in the respective directories with the following variables:
 
 ```env
 # Database
-MONGODB_URI=mongodb://localhost:27017/baby-shop
+MONGO_URI=mongodb://localhost:27017/baby-shop
+# MONGODB_URI is also supported
 # OR for MongoDB Atlas
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
 
 # JWT
 JWT_SECRET=your_jwt_secret_key_here
@@ -230,6 +231,7 @@ EMAIL_PASS=your-app-password
 # Stripe
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SYNC_SECRET=use_the_same_random_secret_in_server_and_client
 
 # Cloudinary
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -248,6 +250,10 @@ ADMIN_URL=http://localhost:5173
 ```env
 NEXT_PUBLIC_SERVER_URL=http://localhost:5000
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+STRIPE_WEBHOOK_SYNC_SECRET=use_the_same_random_secret_as_server
+NEXT_PUBLIC_API_ENDPOINT=http://localhost:5000/api
 ```
 
 #### Admin (`.env` in `/admin`)
