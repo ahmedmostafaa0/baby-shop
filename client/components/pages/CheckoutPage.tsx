@@ -177,7 +177,7 @@ const CheckoutPageContent = () => {
           name: item.productId.name,
           price: item.productId.price,
           quantity: item.quantity,
-          image: item.productId.image,
+          image: item.productId.image[0] || "",
         }));
 
         const { data } = await api.post(`/orders`, {
