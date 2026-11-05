@@ -43,7 +43,7 @@ type OrderState = {
   loadOrders: () => Promise<void>;
   getOrderById: (orderId: string) => Promise<void>;
   createOrder: (data: {
-    items: any[];
+    items: Array<{ _id: string; quantity: number }>;
     shippingAddress: {
       street: string;
       city: string;
