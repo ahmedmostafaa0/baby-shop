@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
                 method: "PUT",
                 headers: {
                   "Content-Type": "application/json",
+                  "x-webhook-secret": process.env.STRIPE_WEBHOOK_SYNC_SECRET || "",
                 },
                 body: JSON.stringify({
                   status: "paid",
@@ -79,6 +80,10 @@ export async function POST(request: NextRequest) {
             );
           } catch (error) {
             console.error(`Webhook: Error updating order ${orderId}:`, error);
+            return NextResponse.json(
+              { error: "Failed to synchronize paid order" },
+              { status: 500 }
+            );
           }
         } else {
           console.error("Webhook: No orderId found in Stripe session metadata");
