@@ -81,7 +81,7 @@ const CheckoutPageContent = () => {
               name: item.productId.name,
               price: item.productId.price,
               quantity: item.quantity,
-              image: item.productId.image[0] || "",
+              image: item.productId.image?.[0] || "",
             })),
             total: currentItems.reduce(
               (total, item) => total + item.productId.price * item.quantity,
@@ -177,7 +177,7 @@ const CheckoutPageContent = () => {
           name: item.productId.name,
           price: item.productId.price,
           quantity: item.quantity,
-          image: item.productId.image[0] || "",
+          image: item.productId.image?.[0] || "",
         }));
 
         const { data } = await api.post(`/orders`, {
