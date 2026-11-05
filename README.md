@@ -174,7 +174,7 @@ baby-shop/
 
 Ensure you have the following installed on your system:
 
-- **Node.js**: v18.0.0 or higher
+- **Node.js**: v20.19.0+ (or v22.12.0+)
 - **npm** or **yarn**: v9.0.0 or higher
 - **MongoDB**: Local instance or Atlas cluster connection string
 - **Git**: For version control
@@ -221,8 +221,8 @@ MONGO_URI=mongodb://localhost:27017/baby-shop
 MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
 
 # JWT
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRE=7d
+JWT_ACCESS_SECRET=your_access_token_secret
+JWT_REFRESH_SECRET=your_refresh_token_secret
 
 # Email Service (Nodemailer)
 EMAIL_USER=your-email@gmail.com
@@ -259,7 +259,9 @@ NEXT_PUBLIC_API_ENDPOINT=http://localhost:5000/api
 #### Admin (`.env` in `/admin`)
 
 ```env
-VITE_SERVER_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
+VITE_CLIENT_URL=http://localhost:3000
+VITE_APP_ENV=development
 ```
 
 ### Running the Project
@@ -344,7 +346,7 @@ cd server
 npm run swagger
 ```
 
-API documentation will be available at `http://localhost:5000/api-docs`
+API documentation will be available at `http://localhost:5000/api/docs`
 
 ### Main API Endpoints
 
