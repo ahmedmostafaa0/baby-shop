@@ -194,6 +194,12 @@ const getCheckoutSummary = asyncHandler(async (req: Request, res: Response) => {
     throw new Error("Only pending orders can be checked out");
   }
 
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== order.userId.toString())) {
+    res.status(403);
+    throw new Error("Not authorized to check out this order");
+  }
+
   const user = order.userId as IUser | null;
   res.json({
     orderId: order._id,
