@@ -377,14 +377,15 @@ API documentation will be available at `http://localhost:5000/api/docs`
 - `POST /api/orders` - Create order
 - `GET /api/orders` - Get user orders
 - `GET /api/orders/:id` - Get order details
-- `PUT /api/orders/:id` - Update order status (Admin)
+- `PUT /api/orders/:id/status` - Update order status (Admin)
 
 #### Cart
 
 - `GET /api/cart` - Get user cart
 - `POST /api/cart` - Add item to cart
 - `PUT /api/cart/:id` - Update cart item
-- `DELETE /api/cart/:id` - Remove from cart
+- `DELETE /api/cart/:productId` - Remove an item from cart
+- `DELETE /api/cart` - Clear the cart
 
 #### Users
 
@@ -418,23 +419,19 @@ Middleware validates token
 ### Payment Flow (Stripe)
 
 ```
-User initiates checkout
+User creates an order
     ↓
-Client sends order data to server
+Backend validates product IDs, quantities, stock, and database prices
     ↓
-Server creates Stripe payment intent
+Next.js API retrieves the trusted order summary
     ↓
-Returns client secret to client
+Stripe Checkout Session is created from server-side amounts
     ↓
-Client initializes Stripe Elements
+Customer completes payment on Stripe Checkout
     ↓
-User completes payment
+Stripe sends a signed webhook to the Next.js API
     ↓
-Server verifies payment
-    ↓
-Order is confirmed in database
-    ↓
-Invoice is generated
+Webhook syncs the paid status to the backend using a shared server secret
 ```
 
 ### Image Upload Flow (Cloudinary)
