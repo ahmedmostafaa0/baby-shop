@@ -165,6 +165,11 @@ const getOrderById = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Order not found");
   }
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== order.userId.toString())) {
+    res.status(403);
+    throw new Error("Not authorized to view this order");
+  }
   res.json(order);
 });
 
@@ -181,7 +186,7 @@ const deleteOrder = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
-  const { status, paymentIntentId, stripeSessionId } = req.body;
+  const { status, paymentIntentId, stripeSessionId } = req.body || {};
   if (!req.body) {
     res.status(400).json({
       success: false,
@@ -201,18 +206,24 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     throw new Error("Order not found!");
   }
 
-  if (req.user) {
-    const isAdmin = req.user?.role === "admin";
-    const isPending = order.status === "pending";
-    const isOwner = req.user._id.toString() !== order.userId.toString();
-    if ((!isAdmin && !isPending) || !isOwner) {
-      res.status(403);
-      throw new Error(
-        isPending
-          ? "Not authorized to update this order"
-          : "Order status can be updated by admin after payment",
-      );
-    }
+  if (req.user && req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Only administrators can update order status");
+  }
+
+  if (!req.user && status !== "paid") {
+    res.status(400);
+    throw new Error("Webhook updates may only mark an order as paid");
+  }
+
+  if (status === "paid" && !stripeSessionId) {
+    res.status(400);
+    throw new Error("Stripe session ID is required for paid orders");
+  }
+
+  if (status === "paid" && order.status !== "pending" && order.status !== "paid") {
+    res.status(409);
+    throw new Error("Only pending orders can be marked as paid");
   }
 
   const updateData: Update = {
@@ -233,7 +244,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
   const updatedOrder = await Order.findByIdAndUpdate(
     req.params.id,
     updateData,
-    { new: true, runValidators: false },
+    { new: true, runValidators: true },
   );
 
   res.json({
