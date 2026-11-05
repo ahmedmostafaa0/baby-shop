@@ -26,6 +26,9 @@ jobs:
             echo "=== Updating $app ==="
             (cd "$app" && npm ci && (npm audit fix || true))
           done
+          # Nodemailer is not imported anywhere in the server source; remove the
+          # unused direct dependency instead of taking an unreviewed major upgrade.
+          (cd server && npm uninstall nodemailer && npm uninstall --save-dev @types/nodemailer)
           # The app pins Next.js exactly, so update it explicitly to the patched
           # release identified by npm audit, keeping Next and its ESLint config aligned.
           cd client
