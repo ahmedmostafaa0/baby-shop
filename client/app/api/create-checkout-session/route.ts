@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const { orderId } = await request.json();
 
-    if (typeof orderId !== "string" || !/^[a-f\\d]{24}$/i.test(orderId)) {
+    if (typeof orderId !== "string" || !/^[a-f\d]{24}$/i.test(orderId)) {
       return NextResponse.json({ error: "A valid order ID is required" }, { status: 400 });
     }
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       `${apiEndpoint}/orders/${orderId}/checkout-summary`,
       {
         method: "GET",
-        headers: { "x-webhook-secret": syncSecret },
+        headers: { Authorization: request.headers.get("authorization") || "" },
         cache: "no-store",
       },
     );
