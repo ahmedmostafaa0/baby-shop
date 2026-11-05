@@ -7,7 +7,7 @@ import  jwt, { JwtPayload } from 'jsonwebtoken';
 const registerUser = asyncHandler(async (req: Request, res: Response) => {
   // #swagger.security = []
   // #swagger.tags = ["Auth"]
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
   const existUser = await User.findOne({ email });
   if (existUser) {
     res.status(400);
@@ -17,7 +17,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     name,
     email,
     password,
-    role,
+    role: "user",
     addresses: [],
   });
   const { accessToken, refreshToken } = generateTokens(user.id);
@@ -100,8 +100,9 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
 
   const refreshToken = req.cookies?.refreshToken
   if (!refreshToken) {
-    res.clearCookie('refreshToken')
-    res.status(204).json({ message: "Already logged out" });
+    res.clearCookie("refreshToken");
+    res.status(204).end();
+    return;
   }
 
   const user = await User.findOne({ refreshToken: refreshToken as string });
