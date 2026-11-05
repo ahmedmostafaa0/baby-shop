@@ -21,7 +21,7 @@ import bannerRoutes from "./routes/banner";
 import uploadRoutes from "./routes/upload";
 
 dotenv.config();
-connectDB();
+const databaseReady = connectDB();
 
 const app = express();
 
@@ -48,7 +48,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-webhook-secret"],
     exposedHeaders: ['x-access-token']
   }),
 );
@@ -75,9 +75,13 @@ app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler);
 
-// const PORT = process.env.PORT || 8000;
-// app.listen(PORT, () => {
-//   console.log("BabyShop API Server is running!");
-// });
+if (require.main === module) {
+  const PORT = Number(process.env.PORT) || 5000;
+  void databaseReady.then(() => {
+    app.listen(PORT, () => {
+      console.log(`BabyShop API Server is running on port ${PORT}`);
+    });
+  });
+}
 
 export default app;
