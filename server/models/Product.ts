@@ -41,7 +41,7 @@ const productSchema = new mongoose.Schema({
         },
         createdAt: {
             type: Date,
-            default: Date.now()
+            default: Date.now
         }
     }],
     averageRating: {
@@ -67,9 +67,10 @@ const productSchema = new mongoose.Schema({
 }, {timestamps: true})
 
 productSchema.pre('save', function(this: IProduct) {
-    if(this.ratings && this.ratings.length > 0){
-        const sum = this.ratings.reduce((acc, item) => acc + item.rating, 0)
-        this.averageRating  = sum / this.ratings.length
+    if (this.isModified("ratings")) {
+        const ratings = this.ratings || [];
+        const sum = ratings.reduce((acc, item) => acc + item.rating, 0);
+        this.averageRating = ratings.length ? sum / ratings.length : 0;
     }
 })
 
