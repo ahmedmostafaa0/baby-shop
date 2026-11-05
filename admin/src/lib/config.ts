@@ -50,7 +50,7 @@ const createApiInstance = (): AxiosInstance => {
   );
 
   let isRefreshing = false;
-  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void; config: any; }[] = [];
+  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }[] = [];
 
   const processQueue = (error: AxiosError | null, token: string | null = null) => {
     failedQueue.forEach(prom => {
@@ -91,15 +91,15 @@ const createApiInstance = (): AxiosInstance => {
         originalRequest._retry = true;
         isRefreshing = true;
 
-        return new Promise(async (resolve, reject) => {
+        return (async () => {
           try {
             const { data } = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
-            const newAccessToken = data.accessToken;
+            const newAccessToken: string = data.accessToken;
             useAuthStore.getState().setToken(newAccessToken);
             instance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
             originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
             processQueue(null, newAccessToken);
-            resolve(instance(originalRequest));
+            return instance(originalRequest);
           } catch (refreshError) {
             processQueue(refreshError as AxiosError);
             useAuthStore.getState().clearAuth();
@@ -107,11 +107,11 @@ const createApiInstance = (): AxiosInstance => {
             if (!publicPaths.includes(location.pathname)) {
               location.href = "/login";
             }
-            reject(refreshError);
+            throw refreshError;
           } finally {
             isRefreshing = false;
           }
-        });
+        })();
       }
 
       if (error.code === "ERR_NETWORK") {
