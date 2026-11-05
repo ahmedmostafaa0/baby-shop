@@ -111,7 +111,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const origin = request.nextUrl.origin;
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
+    if (!configuredSiteUrl) {
+      throw new Error("NEXT_PUBLIC_SITE_URL must be configured");
+    }
+    const origin = new URL(configuredSiteUrl).origin;
     const encodedOrderId = encodeURIComponent(orderId);
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2026-01-28.clover",
