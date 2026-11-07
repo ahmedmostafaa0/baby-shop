@@ -127,26 +127,55 @@ const createOrderFromCart = asyncHandler(
       );
     }
 
-    const validateItems = await Promise.all(
-      items.map(async (item: { _id?: string; quantity?: number }) => {
-        const quantity = Number(item.quantity);
-        if (
-          !item._id ||
-          !Number.isSafeInteger(quantity) ||
-          quantity < 1
-        ) {
-          res.status(400);
-          throw new Error("Each order item requires a valid product ID and positive integer quantity");
-        }
+    // Merge duplicate product rows before checking stock. Otherwise a client could
+    // submit the same product multiple times and bypass the per-row stock check.
+    const requestedQuantities = new Map<string, number>();
 
-        const product = await Product.findById(item._id);
-        if (!product) {
-          res.status(404);
-          throw new Error("One or more products could not be found");
-        }
+    for (const item of items as { _id?: string; quantity?: number }[]) {
+      const productId = item._id;
+      const quantity = Number(item.quantity);
+
+      if (
+        typeof productId !== "string" ||
+        !/^[a-fA-F0-9]{24}$/.test(productId) ||
+        !Number.isSafeInteger(quantity) ||
+        quantity < 1
+      ) {
+        res.status(400);
+        throw new Error(
+          "Each order item requires a valid product ID and positive integer quantity",
+        );
+      }
+
+      const combinedQuantity = (requestedQuantities.get(productId) ?? 0) + quantity;
+      if (!Number.isSafeInteger(combinedQuantity)) {
+        res.status(400);
+        throw new Error("Combined product quantity is too large");
+      }
+      requestedQuantities.set(productId, combinedQuantity);
+    }
+
+    const products = await Product.find({
+      _id: { $in: [...requestedQuantities.keys()] },
+    });
+    const productsById = new Map(
+      products.map((product) => [product._id.toString(), product]),
+    );
+
+    if (productsById.size !== requestedQuantities.size) {
+      res.status(404);
+      throw new Error("One or more products could not be found");
+    }
+
+    const validateItems = [...requestedQuantities.entries()].map(
+      ([productId, quantity]) => {
+        const product = productsById.get(productId)!;
+
         if (quantity > (product.stock ?? 0)) {
           res.status(400);
-          throw new Error(`Requested quantity for ${product.name} exceeds available stock`);
+          throw new Error(
+            `Requested quantity for ${product.name} exceeds available stock`,
+          );
         }
 
         const discountedPrice = Number(
@@ -160,7 +189,7 @@ const createOrderFromCart = asyncHandler(
           quantity,
           image: product.image[0] || "",
         };
-      }),
+      },
     );
 
     const total = validateItems.reduce(
