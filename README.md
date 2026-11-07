@@ -8,7 +8,7 @@
 
 A modern, full-stack e-commerce platform specialized for baby products with comprehensive admin dashboard, secure payment processing, and intuitive user interface.
 
-[Live Demo](#) • [Admin Panel](#) • [Report Bug](https://github.com/ahmedmostafaa0/baby-shop/issues) • [Request Feature](https://github.com/ahmedmostafaa0/baby-shop/issues)
+Live demo and hosted admin panel are not deployed yet. • [Report Bug](https://github.com/ahmedmostafaa0/baby-shop/issues) • [Request Feature](https://github.com/ahmedmostafaa0/baby-shop/issues)
 
 </div>
 
@@ -171,7 +171,7 @@ baby-shop/
 
 Ensure you have the following installed on your system:
 
-- **Node.js**: v20.19.0+ (or v22.12.0+)
+- **Node.js**: v22.12.0 or newer
 - **npm** or **yarn**: v9.0.0 or higher
 - **MongoDB**: Local instance or Atlas cluster connection string
 - **Git**: For version control
@@ -363,7 +363,7 @@ GitHub Actions runs dependency audits, TypeScript builds, frontend linting, the 
 ### For Administrators
 
 1. **Login**: Access admin panel at `/admin` with admin credentials
-2. **Dashboard**: View real-time analytics and statistics
+2. **Dashboard**: View analytics and statistics
 3. **Manage Products**: Create, edit, or delete products
 4. **Manage Categories/Brands**: Organize your product catalog
 5. **Process Orders**: View and update order statuses
