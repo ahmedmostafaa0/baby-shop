@@ -143,12 +143,13 @@ const createOrderFromCart = asyncHandler(
         res.status(400);
         throw new Error("Each order item requires a valid product ID and positive integer quantity");
       }
-      const combinedQuantity = (requestedQuantities.get(productId) ?? 0) + quantity;
+      const normalizedProductId = productId.toLowerCase();
+      const combinedQuantity = (requestedQuantities.get(normalizedProductId) ?? 0) + quantity;
       if (!Number.isSafeInteger(combinedQuantity)) {
         res.status(400);
         throw new Error("Combined product quantity is too large");
       }
-      requestedQuantities.set(productId, combinedQuantity);
+      requestedQuantities.set(normalizedProductId, combinedQuantity);
     }
 
     const session = await mongoose.startSession();
