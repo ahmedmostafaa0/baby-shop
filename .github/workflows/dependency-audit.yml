@@ -58,6 +58,8 @@ jobs:
             }));
           }
           NODE
+      - name: Enforce full dependency security (including development tooling)
+        run: npm audit
       - name: Enforce production dependency security
         run: npm audit --omit=dev
       - name: Upload raw npm audit report
