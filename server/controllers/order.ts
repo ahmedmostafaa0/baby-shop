@@ -388,9 +388,9 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (status === "cancelled") {
-    if (order.status !== "pending") {
+    if (order.status !== "pending" || order.stripeSessionId) {
       res.status(409);
-      throw new Error("Only pending orders can be cancelled without a refund");
+      throw new Error("Orders with an active Stripe checkout must expire through Stripe before inventory can be released");
     }
     const session = await mongoose.startSession();
     let cancelledOrder: InstanceType<typeof Order> | null = null;
