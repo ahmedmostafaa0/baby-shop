@@ -89,6 +89,37 @@ test("invalid Stripe signatures are rejected before backend synchronization", as
   }
 });
 
+test("paid checkout events synchronize the paid status and payment intent", async () => {
+  process.env.STRIPE_SECRET_KEY = "sk_test_webhook_suite";
+  process.env.STRIPE_WEBHOOK_SECRET = webhookSecret;
+  process.env.STRIPE_WEBHOOK_SYNC_SECRET = "backend-sync-test-secret";
+
+  const originalFetch = globalThis.fetch;
+  let synced: Record<string, unknown> | undefined;
+  globalThis.fetch = async (_input, init) => {
+    synced = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+  };
+
+  try {
+    const { payload, signature } = signedEvent("checkout.session.completed", {
+      payment_status: "paid",
+      payment_intent: "pi_test_payment",
+    });
+    const request = new NextRequest("http://localhost/api/stripe-webhook", {
+      method: "POST",
+      headers: { "stripe-signature": signature },
+      body: payload,
+    });
+    const response = await POST(request);
+    assert.equal(response.status, 200);
+    assert.equal(synced?.status, "paid");
+    assert.equal(synced?.paymentIntentId, "pi_test_payment");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("completed checkout events without paid status are ignored", async () => {
   process.env.STRIPE_SECRET_KEY = "sk_test_webhook_suite";
   process.env.STRIPE_WEBHOOK_SECRET = webhookSecret;
