@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import Stripe from "stripe";
-import { NextRequest } from "next/server";
+import { NextRequest } from "next/server.js";
 import { POST } from "../app/api/stripe-webhook/route.ts";
 
 const stripe = new Stripe("sk_test_webhook_suite");
