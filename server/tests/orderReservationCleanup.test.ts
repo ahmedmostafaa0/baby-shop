@@ -71,6 +71,11 @@ test("concurrent orders and duplicate cart rows cannot oversell inventory", asyn
   assert.deepEqual(concurrentResults.map((result) => result.status).sort(), [201, 409]);
   assert.equal((await Product.findById(concurrentProduct._id))?.stock, 0);
   assert.equal(await Order.countDocuments({ "items.productId": concurrentProduct._id }), 1);
+  const createdOrder = await Order.findOne({ "items.productId": concurrentProduct._id });
+  assert.equal(createdOrder?.subtotal, 20);
+  assert.equal(createdOrder?.shippingCost, 15);
+  assert.equal(createdOrder?.tax, 1.6);
+  assert.equal(createdOrder?.total, 36.6);
 
   const duplicateProduct = await Product.create({
     name: `Duplicate row test ${new Types.ObjectId().toString()}`,
