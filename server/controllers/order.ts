@@ -422,7 +422,14 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
             { stripeSessionId: { $exists: false } },
             { stripeSessionId: null },
           ],
-          reservationExpiresAt: { $exists: false },
+          $and: [
+            {
+              $or: [
+                { reservationExpiresAt: { $exists: false } },
+                { reservationExpiresAt: null },
+              ],
+            },
+          ],
         },
         { $set: { status: "cancelled", updatedAt: new Date() } },
         { returnDocument: "after" },
