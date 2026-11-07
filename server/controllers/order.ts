@@ -229,9 +229,9 @@ const getCheckoutSummary = asyncHandler(async (req: Request, res: Response) => {
     res.status(409);
     throw new Error("Only pending orders can be checked out");
   }
-  if (order.reservationExpiresAt && order.reservationExpiresAt.getTime() <= Date.now()) {
+  if (!order.reservationExpiresAt || order.reservationExpiresAt.getTime() <= Date.now()) {
     res.status(409);
-    throw new Error("This order's inventory reservation has expired; create a new order");
+    throw new Error("This order has no active inventory reservation; create a new order");
   }
 
   const user = order.userId as IUser | null;
@@ -410,6 +410,35 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
       res.status(409);
       throw new Error("Orders with an active Stripe checkout must expire through Stripe before inventory can be released");
     }
+
+    // Orders created before transactional reservations have no expiry marker and
+    // therefore never had stock deducted. Cancel them without incrementing stock.
+    if (!order.reservationExpiresAt) {
+      const legacyCancellation = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          status: "pending",
+          $or: [
+            { stripeSessionId: { $exists: false } },
+            { stripeSessionId: null },
+          ],
+          reservationExpiresAt: { $exists: false },
+        },
+        { $set: { status: "cancelled", updatedAt: new Date() } },
+        { returnDocument: "after" },
+      );
+      if (!legacyCancellation) {
+        res.status(409);
+        throw new Error("Order was already changed");
+      }
+      res.json({
+        success: true,
+        order: legacyCancellation,
+        message: "Legacy order cancelled; no inventory reservation existed",
+      });
+      return;
+    }
+
     const session = await mongoose.startSession();
     let cancelledOrder: InstanceType<typeof Order> | null = null;
     try {
