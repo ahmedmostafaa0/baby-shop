@@ -50,6 +50,8 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - name: Test signed Stripe webhook handling
+        run: npm test
       - run: npm run build
         env:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
