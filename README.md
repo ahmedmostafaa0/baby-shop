@@ -177,6 +177,10 @@ Ensure you have the following installed on your system:
 - **MongoDB**: Local instance or Atlas cluster connection string
 - **Git**: For version control
 
+### Database requirement
+
+Order creation, checkout expiration, and inventory restoration use MongoDB multi-document transactions. The database **must support transactions** (MongoDB Atlas or a properly configured replica set). A standalone MongoDB server is not supported for this workflow. Do not run the checkout flow against a standalone local MongoDB instance.
+
 ### Installation
 
 1. **Clone the repository**
@@ -213,10 +217,14 @@ Create `.env` files in the respective directories with the following variables:
 
 ```env
 # Database
-MONGO_URI=mongodb://localhost:27017/baby-shop
+# MongoDB must run as a replica set because order creation and inventory
+# reservation/release use multi-document transactions.
+# MongoDB Atlas is supported. For local development, configure a single-node
+# replica set (for example rs0) before using this URI:
+MONGO_URI=mongodb://localhost:27017/baby-shop?replicaSet=rs0
 # MONGODB_URI is also supported
-# OR for MongoDB Atlas
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
+# OR use your MongoDB Atlas replica-set connection string:
+# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
 
 # JWT
 JWT_ACCESS_SECRET=your_access_token_secret
@@ -422,17 +430,19 @@ Middleware validates token
 ```
 User creates an order
     ↓
-Backend validates product IDs, quantities, stock, and database prices
+Backend validates product IDs and quantities, then atomically reserves stock
+inside a MongoDB transaction
     ↓
-Next.js API retrieves the trusted order summary
+Next.js API retrieves the trusted order summary and creates a Stripe Checkout Session
     ↓
-Stripe Checkout Session is created from server-side amounts
+The exact Stripe session ID is attached to the pending order
     ↓
 Customer completes payment on Stripe Checkout
     ↓
 Stripe sends a signed webhook to the Next.js API
     ↓
-Webhook syncs the paid status to the backend using a shared server secret
+Paid events mark the order paid; expired sessions cancel the order and
+restore inventory transactionally (duplicate webhook events are idempotent)
 ```
 
 ### Image Upload Flow (Cloudinary)
