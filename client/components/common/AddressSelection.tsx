@@ -46,13 +46,6 @@ export const AddressSelection: React.FC<AddressSelectionProps> = ({
 
   const { user, isAuthenticated } = useAuth();
 
-  // Update form when dialog opens
-  useEffect(() => {
-    if (isAddDialogOpen) {
-      resetForm();
-    }
-  }, [isAddDialogOpen, addresses.length]);
-
   const resetForm = () => {
     setFormData({
       street: "",
@@ -62,6 +55,13 @@ export const AddressSelection: React.FC<AddressSelectionProps> = ({
       isDefault: addresses.length === 0, // Auto-check if this is the first address
     });
   };
+
+  // Update form when dialog opens
+  useEffect(() => {
+    if (isAddDialogOpen) {
+      resetForm();
+    }
+  }, [isAddDialogOpen, addresses.length]);
 
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,0 +1,70 @@
+name: Dependency Security Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [chore/portfolio-hardening]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Audits production and development dependency trees so tooling issues remain visible.
+jobs:
+  audit:
+    name: npm audit (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [server, client, admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+      - name: Run audit and print advisory details
+        shell: bash
+        run: |
+          npm audit --json > npm-audit.json || true
+          node <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('npm-audit.json', 'utf8'));
+          const vulns = report.vulnerabilities || {};
+          const counts = report.metadata?.vulnerabilities || {};
+          console.log('Vulnerability totals:', JSON.stringify(counts));
+          for (const [name, item] of Object.entries(vulns)) {
+            console.log(JSON.stringify({
+              package: name,
+              severity: item.severity,
+              isDirect: item.isDirect,
+              range: item.range,
+              installedVia: item.nodes,
+              fixAvailable: item.fixAvailable,
+              advisories: (item.via || []).map(v => typeof v === 'string' ? v : ({
+                title: v.title,
+                url: v.url,
+                range: v.range,
+                cwe: v.cwe,
+                cvss: v.cvss?.score
+              }))
+            }));
+          }
+          NODE
+      - name: Enforce full dependency security (including development tooling)
+        run: npm audit
+      - name: Enforce production dependency security
+        run: npm audit --omit=dev
+      - name: Upload raw npm audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ matrix.app }}
+          path: ${{ matrix.app }}/npm-audit.json
+          if-no-files-found: error

@@ -11,7 +11,7 @@ import { CreditCard, Lock, CheckCircle, AlertCircle } from "lucide-react";
 import Image from "next/image";
 
 import { toast } from "sonner";
-import { Address, Order, StripeCheckoutItem } from "@/types/types";
+import { Address, Order } from "@/types/types";
 import useAuth from "@/hooks/useAuth";
 import { useCartStore } from "@/hooks/useCart";
 import PageBreadcrumb from "../common/PageBreadCrumb";
@@ -81,7 +81,7 @@ const CheckoutPageContent = () => {
               name: item.productId.name,
               price: item.productId.price,
               quantity: item.quantity,
-              image: item.productId.image,
+              image: item.productId.image?.[0] || "",
             })),
             total: currentItems.reduce(
               (total, item) => total + item.productId.price * item.quantity,
@@ -177,7 +177,7 @@ const CheckoutPageContent = () => {
           name: item.productId.name,
           price: item.productId.price,
           quantity: item.quantity,
-          image: item.productId.image,
+          image: item.productId.image?.[0] || "",
         }));
 
         const { data } = await api.post(`/orders`, {
@@ -197,57 +197,11 @@ const CheckoutPageContent = () => {
         setIsCreatingOrder(false);
       }
 
-      // Convert order items to Stripe format
-      const stripeItems: StripeCheckoutItem[] = finalOrder.items.map(
-        (item) => ({
-          name: item.name,
-          description: `Quantity: ${item.quantity}`,
-          amount: Math.round(item.price * 100), // Convert to cents
-          currency: "usd",
-          quantity: item.quantity,
-          images: item.image ? [item.image] : undefined,
-        }),
+      // The server loads the authoritative order and calculates every amount.
+      const result = await createCheckoutSession(
+        { orderId: finalOrder._id },
+        useAuth.getState().token,
       );
-
-      // Add shipping and tax as separate line items if applicable
-      const shipping = calculateShipping();
-      const tax = calculateTax();
-
-      if (shipping > 0) {
-        stripeItems.push({
-          name: "Shipping",
-          description: "Standard shipping",
-          amount: Math.round(shipping * 100),
-          currency: "usd",
-          quantity: 1,
-        });
-      }
-
-      if (tax > 0) {
-        stripeItems.push({
-          name: "Tax",
-          description: "Sales tax",
-          amount: Math.round(tax * 100),
-          currency: "usd",
-          quantity: 1,
-        });
-      }
-
-      // Create checkout session
-      console.log(
-        "Checkout: Creating session with origin:",
-        window.location.origin,
-      );
-      const result = await createCheckoutSession({
-        items: stripeItems,
-        customerEmail: user?.email,
-        successUrl: `${window.location.origin}/success?orderId=${finalOrder._id}&session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${window.location.origin}/cancel?orderId=${finalOrder._id}`,
-        metadata: {
-          orderId: finalOrder._id,
-          shippingAddress: JSON.stringify(selectedAddress),
-        },
-      });
 
       if ("url" in result) {
         location.href = result.url;
@@ -382,7 +336,7 @@ const CheckoutPageContent = () => {
                   <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                     {item.image ? (
                       <Image
-                        src={item.image[0]}
+                        src={item.image}
                         alt={item.name}
                         fill
                         className="object-cover"

@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+.next/
+coverage/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+admin/.env
+client/.env.local
+server/.env
+
+# Logs and local tooling
+*.log
+.DS_Store
+.vscode/
+.idea/

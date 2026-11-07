@@ -50,7 +50,7 @@ const createApiInstance = (): AxiosInstance => {
   );
 
   let isRefreshing = false;
-  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void; config: any; }[] = [];
+  let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }[] = [];
 
   const processQueue = (error: AxiosError | null, token: string | null = null) => {
     failedQueue.forEach(prom => {
@@ -79,7 +79,7 @@ const createApiInstance = (): AxiosInstance => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
           return new Promise(function(resolve, reject) {
-            failedQueue.push({ resolve, reject, config: originalRequest });
+            failedQueue.push({ resolve, reject });
           }).then(token => {
             originalRequest.headers["Authorization"] = "Bearer " + token;
             return instance(originalRequest);

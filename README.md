@@ -8,7 +8,7 @@
 
 A modern, full-stack e-commerce platform specialized for baby products with comprehensive admin dashboard, secure payment processing, and intuitive user interface.
 
-[Live Demo](#) • [Admin Panel](#) • [Report Bug](https://github.com/ahmedmostafaa0/baby-shop/issues) • [Request Feature](https://github.com/ahmedmostafaa0/baby-shop/issues)
+Live demo and hosted admin panel are not deployed yet. • [Report Bug](https://github.com/ahmedmostafaa0/baby-shop/issues) • [Request Feature](https://github.com/ahmedmostafaa0/baby-shop/issues)
 
 </div>
 
@@ -72,7 +72,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - 📋 **Order Management**: Process and track orders
 - 📄 **Invoice Generation**: Export invoices as PDF
 - 📊 **Analytics Reports**: Detailed business analytics
-- 📤 **Bulk Upload**: Excel-based product upload
 
 ---
 
@@ -101,7 +100,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
 - **Charts**: [Recharts](https://recharts.org/)
 - **Export**: [html2canvas](https://html2canvas.hertzen.com/) + [jsPDF](https://github.com/parallax/jsPDF)
-- **Spreadsheet**: [XLSX](https://sheetjs.com/)
 
 ### Backend - API Server (Express.js)
 
@@ -112,7 +110,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - **Authentication**: JWT (JSON Web Tokens)
 - **Security**: [bcrypt](https://github.com/kelektiv/node.bcrypt.js) for password hashing
 - **File Upload**: [Multer](https://github.com/expressjs/multer) + [Cloudinary](https://cloudinary.com/)
-- **Email**: [Nodemailer](https://nodemailer.com/)
 - **Payment**: [Stripe API](https://stripe.com/)
 - **API Docs**: [Swagger UI Express](https://github.com/scottie1984/swagger-ui-express)
 - **Async Handling**: [express-async-handler](https://github.com/Abourass/express-async-handler)
@@ -174,10 +171,28 @@ baby-shop/
 
 Ensure you have the following installed on your system:
 
-- **Node.js**: v18.0.0 or higher
+- **Node.js**: v22.12.0 or newer
 - **npm** or **yarn**: v9.0.0 or higher
 - **MongoDB**: Local instance or Atlas cluster connection string
 - **Git**: For version control
+
+### Database requirement
+
+Order creation, checkout expiration, and inventory restoration use MongoDB multi-document transactions. The database **must support transactions** (MongoDB Atlas, a properly configured replica set, or a sharded cluster). A standalone MongoDB server is not supported for this workflow. The API checks this at startup and exits with a clear error if the database is standalone.
+
+For local development, start MongoDB with replica-set mode enabled and initialize it once:
+
+```bash
+mongod --replSet rs0 --bind_ip localhost
+```
+
+In another terminal:
+
+```bash
+mongosh --eval "rs.initiate()"
+```
+
+Then use the local connection string shown in the Server environment section.
 
 ### Installation
 
@@ -215,21 +230,23 @@ Create `.env` files in the respective directories with the following variables:
 
 ```env
 # Database
-MONGODB_URI=mongodb://localhost:27017/baby-shop
-# OR for MongoDB Atlas
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
+# MongoDB must run as a replica set because order creation and inventory
+# reservation/release use multi-document transactions.
+# MongoDB Atlas is supported. For local development, configure a single-node
+# replica set (for example rs0) before using this URI:
+MONGO_URI=mongodb://localhost:27017/baby-shop?replicaSet=rs0
+# MONGODB_URI is also supported
+# OR use your MongoDB Atlas replica-set connection string:
+# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/baby-shop
 
 # JWT
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRE=7d
-
-# Email Service (Nodemailer)
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
+JWT_ACCESS_SECRET=your_access_token_secret
+JWT_REFRESH_SECRET=your_refresh_token_secret
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SYNC_SECRET=use_the_same_random_secret_in_server_and_client
 
 # Cloudinary
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -246,14 +263,23 @@ ADMIN_URL=http://localhost:5173
 #### Client (`.env.local` in `/client`)
 
 ```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SERVER_URL=http://localhost:5000
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+STRIPE_WEBHOOK_SYNC_SECRET=use_the_same_random_secret_as_server
+NEXT_PUBLIC_API_ENDPOINT=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_APP_ENV=development
 ```
 
 #### Admin (`.env` in `/admin`)
 
 ```env
-VITE_SERVER_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000/api
+VITE_CLIENT_URL=http://localhost:3000
+VITE_APP_ENV=development
 ```
 
 ### Running the Project
@@ -305,6 +331,24 @@ npm run build
 
 ---
 
+## 🧪 Tests and CI
+
+Run the backend inventory and order-webhook integration tests against a MongoDB replica set:
+
+```bash
+cd server
+MONGO_URI="mongodb://localhost:27017/baby-shop-test?replicaSet=rs0" npm test
+```
+
+Run the Stripe Checkout and webhook route tests (the Checkout tests use an injected Stripe test client and mocked backend responses; webhook tests use generated Stripe test signatures and a mocked backend sync):
+
+```bash
+cd client
+npm test
+```
+
+GitHub Actions runs dependency audits, TypeScript builds, frontend linting, the MongoDB-backed inventory tests, and the Stripe webhook tests on pull requests.
+
 ## 💻 Usage
 
 ### For Customers
@@ -319,7 +363,7 @@ npm run build
 ### For Administrators
 
 1. **Login**: Access admin panel at `/admin` with admin credentials
-2. **Dashboard**: View real-time analytics and statistics
+2. **Dashboard**: View analytics and statistics
 3. **Manage Products**: Create, edit, or delete products
 4. **Manage Categories/Brands**: Organize your product catalog
 5. **Process Orders**: View and update order statuses
@@ -331,14 +375,7 @@ npm run build
 
 ## 📚 API Documentation
 
-The project includes Swagger API documentation. Generate it using:
-
-```bash
-cd server
-npm run swagger
-```
-
-API documentation will be available at `http://localhost:5000/api-docs`
+The project includes a committed OpenAPI specification served through Swagger UI. Start the backend and open `http://localhost:5000/api/docs` to explore the API.
 
 ### Main API Endpoints
 
@@ -369,14 +406,15 @@ API documentation will be available at `http://localhost:5000/api-docs`
 - `POST /api/orders` - Create order
 - `GET /api/orders` - Get user orders
 - `GET /api/orders/:id` - Get order details
-- `PUT /api/orders/:id` - Update order status (Admin)
+- `PUT /api/orders/:id/status` - Update order status (Admin)
 
 #### Cart
 
 - `GET /api/cart` - Get user cart
 - `POST /api/cart` - Add item to cart
 - `PUT /api/cart/:id` - Update cart item
-- `DELETE /api/cart/:id` - Remove from cart
+- `DELETE /api/cart/:productId` - Remove an item from cart
+- `DELETE /api/cart` - Clear the cart
 
 #### Users
 
@@ -410,23 +448,21 @@ Middleware validates token
 ### Payment Flow (Stripe)
 
 ```
-User initiates checkout
+User creates an order
     ↓
-Client sends order data to server
+Backend validates product IDs and quantities, then atomically reserves stock
+inside a MongoDB transaction
     ↓
-Server creates Stripe payment intent
+Next.js API retrieves the trusted order summary and creates a Stripe Checkout Session
     ↓
-Returns client secret to client
+The exact Stripe session ID is attached to the pending order
     ↓
-Client initializes Stripe Elements
+Customer completes payment on Stripe Checkout
     ↓
-User completes payment
+Stripe sends a signed webhook to the Next.js API
     ↓
-Server verifies payment
-    ↓
-Order is confirmed in database
-    ↓
-Invoice is generated
+Paid events mark the order paid; expired sessions cancel the order and
+restore inventory transactionally (duplicate webhook events are idempotent)
 ```
 
 ### Image Upload Flow (Cloudinary)

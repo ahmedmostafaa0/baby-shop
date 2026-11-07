@@ -1,0 +1,47 @@
+name: Dependency Remediation
+
+on:
+  push:
+    branches: [chore/portfolio-hardening]
+    paths:
+      - 'server/package.json'
+      - 'client/package.json'
+      - 'admin/package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lockfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/portfolio-hardening
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate lockfiles from reviewed package constraints
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in server client admin; do
+            echo "=== Refreshing $app lockfile ==="
+            (cd "$app" && npm install --package-lock-only --ignore-scripts)
+            (cd "$app" && npm ci)
+            (cd "$app" && npm audit --omit=dev)
+          done
+      - name: Commit refreshed lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/package-lock.json client/package-lock.json admin/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfiles are already up to date."
+            exit 0
+          fi
+          git commit -m "chore(deps): refresh lockfiles with security overrides"
+          git push origin chore/portfolio-hardening

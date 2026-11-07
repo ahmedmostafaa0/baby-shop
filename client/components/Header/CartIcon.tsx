@@ -2,14 +2,11 @@
 import { useCartStore } from "@/hooks/useCart";
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const CartIcon = () => {
   const {items} = useCartStore()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   if(!mounted){
       return (

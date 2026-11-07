@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import errorHandler from "./middlewares/error";
 import connectDB from "./config/db";
+import { startReservationCleanup } from "./utils/orderReservationCleanup";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "./utils/swagger-output.json";
@@ -21,7 +22,7 @@ import bannerRoutes from "./routes/banner";
 import uploadRoutes from "./routes/upload";
 
 dotenv.config();
-connectDB();
+const databaseReady = connectDB();
 
 const app = express();
 
@@ -48,7 +49,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-webhook-secret"],
     exposedHeaders: ['x-access-token']
   }),
 );
@@ -75,9 +76,14 @@ app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler);
 
-// const PORT = process.env.PORT || 8000;
-// app.listen(PORT, () => {
-//   console.log("BabyShop API Server is running!");
-// });
+if (require.main === module) {
+  const PORT = Number(process.env.PORT) || 5000;
+  void databaseReady.then(() => {
+    startReservationCleanup();
+    app.listen(PORT, () => {
+      console.log(`BabyShop API Server is running on port ${PORT}`);
+    });
+  });
+}
 
 export default app;

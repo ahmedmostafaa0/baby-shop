@@ -45,6 +45,11 @@ const createUser = asyncHandler(async (req: Request, res: Response) => {
 const getUserById = asyncHandler(async (req: Request, res: Response) => {
   // #swagger.tags = ['Users']
   const { id } = req.params;
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== id)) {
+    res.status(403);
+    throw new Error("Not authorized to view this user");
+  }
   const user = await User.findById(id).select("-password");
   if (!user) {
     res.status(404);
@@ -57,13 +62,18 @@ const updateUser = asyncHandler(async (req: Request, res: Response) => {
   // #swagger.tags = ['Users']
   const { name, role, email, addresses, password, avatar } = req.body;
   const { id } = req.params;
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== id)) {
+    res.status(403);
+    throw new Error("Not authorized to update this user");
+  }
   const user = await User.findById(id);
   if (!user) {
     res.status(404);
     throw new Error("User not found!");
   }
   user.name = name || user.name
-  user.role = role || user.role
+  if (isAdmin && role) user.role = role
   user.email = email || user.email
   user.password = password || user.password
   user.avatar = avatar || user.avatar
@@ -94,6 +104,11 @@ const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 
 const addAddress = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== id)) {
+    res.status(403);
+    throw new Error("Not authorized to manage this address");
+  }
   const user = await User.findById(id);
   if (!user) {
     res.status(404);
@@ -127,6 +142,11 @@ const addAddress = asyncHandler(async (req: Request, res: Response) => {
 const updateAddress = asyncHandler(async (req: Request, res: Response) => {
   const { id, addressId } = req.params;
   const { street, city, country, postalCode, isDefault } = req.body;
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== id)) {
+    res.status(403);
+    throw new Error("Not authorized to manage this address");
+  }
   const user = await User.findById(id);
   if (!user) {
     res.status(404);
@@ -164,6 +184,11 @@ const deleteAddress = asyncHandler(async (req: Request, res: Response) => {
   if(!addressId || typeof addressId !== 'string'){
     res.status(400)
     throw new Error('Invalid address id')
+  }
+  const isAdmin = req.user?.role === "admin";
+  if (!req.user || (!isAdmin && req.user._id.toString() !== id)) {
+    res.status(403);
+    throw new Error("Not authorized to manage this address");
   }
   const user = await User.findById(id);
   if (!user) {
