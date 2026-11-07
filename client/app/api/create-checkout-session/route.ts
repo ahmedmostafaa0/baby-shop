@@ -17,7 +17,16 @@ interface CheckoutSummary {
   }>;
 }
 
-export async function POST(request: NextRequest) {
+type CheckoutDependencies = {
+  fetcher?: typeof fetch;
+  createStripe?: (secretKey: string) => Stripe;
+};
+
+export async function createCheckoutSession(
+  request: NextRequest,
+  dependencies: CheckoutDependencies = {},
+) {
+  const fetcher = dependencies.fetcher ?? fetch;
   try {
     const { orderId } = await request.json();
 
@@ -37,7 +46,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_API_ENDPOINT ||
       "http://localhost:5000/api";
 
-    const summaryResponse = await fetch(
+    const summaryResponse = await fetcher(
       `${apiEndpoint}/orders/${orderId}/checkout-summary`,
       {
         method: "GET",
@@ -134,9 +143,9 @@ export async function POST(request: NextRequest) {
     }
     const origin = new URL(configuredSiteUrl).origin;
     const encodedOrderId = encodeURIComponent(orderId);
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2026-01-28.clover",
-    });
+    const stripe = dependencies.createStripe
+      ? dependencies.createStripe(stripeSecretKey)
+      : new Stripe(stripeSecretKey, { apiVersion: "2026-01-28.clover" });
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -154,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     // Persist the exact session before returning its URL. This prevents another
     // checkout session from being attached to the same inventory reservation.
-    const attachResponse = await fetch(`${apiEndpoint}/orders/${orderId}/webhook-status`, {
+    const attachResponse = await fetcher(`${apiEndpoint}/orders/${orderId}/webhook-status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -181,4 +190,9 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+
+export async function POST(request: NextRequest) {
+  return createCheckoutSession(request);
 }
