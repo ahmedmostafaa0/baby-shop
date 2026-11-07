@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import mongoose, { Types } from "mongoose";
+import express from "express";
+import orderRoutes from "../routes/order";
 import Order from "../models/Order";
 import Product from "../models/Product";
 import { releaseExpiredUnstartedReservations } from "../utils/orderReservationCleanup";
@@ -67,4 +69,71 @@ test("expired unstarted reservations restore stock exactly once", async () => {
   assert.equal(refreshedProduct?.stock, 1);
   assert.equal(refreshedExpiredOrder?.status, "cancelled");
   assert.equal(refreshedActiveOrder?.status, "pending");
+});
+
+test("expired Stripe webhook restores stock once and is idempotent", async () => {
+  const product = await Product.create({
+    name: `Stripe expiry test ${new Types.ObjectId().toString()}`,
+    description: "Stripe webhook inventory integration test",
+    price: 12,
+    stock: 0,
+    image: ["https://example.com/product.png"],
+    category: new Types.ObjectId(),
+    brand: new Types.ObjectId(),
+  });
+  const order = await Order.create({
+    userId: new Types.ObjectId(),
+    items: [{
+      productId: product._id,
+      name: product.name,
+      price: 12,
+      quantity: 1,
+      image: "https://example.com/product.png",
+    }],
+    total: 12,
+    status: "pending",
+    stripeSessionId: "cs_test_expired",
+    shippingAddress: {
+      street: "Test street",
+      city: "Test city",
+      country: "Test country",
+      postalCode: "12345",
+    },
+  });
+
+  process.env.STRIPE_WEBHOOK_SYNC_SECRET = "integration-test-secret";
+  const app = express();
+  app.use(express.json());
+  app.use("/api/orders", orderRoutes);
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Test server did not bind a TCP port");
+    const endpoint = `http://127.0.0.1:${address.port}/api/orders/${order._id}/webhook-status`;
+    const payload = JSON.stringify({ status: "cancelled", stripeSessionId: "cs_test_expired" });
+    const sendExpiredEvent = () => fetch(endpoint, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "x-webhook-secret": "integration-test-secret",
+      },
+      body: payload,
+    });
+
+    const firstResponse = await sendExpiredEvent();
+    assert.equal(firstResponse.status, 200);
+    const secondResponse = await sendExpiredEvent();
+    assert.equal(secondResponse.status, 200);
+
+    const refreshedProduct = await Product.findById(product._id);
+    const refreshedOrder = await Order.findById(order._id);
+    assert.equal(refreshedProduct?.stock, 1);
+    assert.equal(refreshedOrder?.status, "cancelled");
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
 });
