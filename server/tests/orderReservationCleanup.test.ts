@@ -51,10 +51,14 @@ test("expired unstarted reservations restore stock exactly once", async () => {
     status: "pending" as const,
   };
 
-  const [expiredOrder, activeOrder] = await Order.create([
-    { ...common, reservationExpiresAt: new Date(Date.now() - 60_000) },
-    { ...common, reservationExpiresAt: new Date(Date.now() + 60_000) },
-  ]);
+  const expiredOrder = await Order.create({
+    ...common,
+    reservationExpiresAt: new Date(Date.now() - 60_000),
+  });
+  const activeOrder = await Order.create({
+    ...common,
+    reservationExpiresAt: new Date(Date.now() + 60_000),
+  });
 
   // Simulate two API instances running the cleanup worker simultaneously.
   await Promise.all([
