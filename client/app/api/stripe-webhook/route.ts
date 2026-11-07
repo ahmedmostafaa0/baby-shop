@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     ) {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.orderId;
-      if (!orderId || !/^[a-f\\d]{24}$/i.test(orderId)) {
+      if (!orderId || !/^[a-f0-9]{24}$/i.test(orderId)) {
         return NextResponse.json({ error: "Missing or invalid order ID in Stripe metadata" }, { status: 400 });
       }
 
