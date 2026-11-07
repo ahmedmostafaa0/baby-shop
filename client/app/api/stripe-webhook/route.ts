@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { headers } from "next/headers";
 
 async function syncOrderStatus(
   orderId: string,
@@ -50,8 +49,7 @@ export async function POST(request: NextRequest) {
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-01-28.clover" });
     const body = await request.text();
-    const headersList = await headers();
-    const signature = headersList.get("stripe-signature");
+    const signature = request.headers.get("stripe-signature");
 
     if (!signature) {
       return NextResponse.json({ error: "No Stripe signature found" }, { status: 400 });
