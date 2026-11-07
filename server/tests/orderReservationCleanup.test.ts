@@ -141,3 +141,75 @@ test("expired Stripe webhook restores stock once and is idempotent", async () =>
     });
   }
 });
+
+test("paid Stripe webhook marks an order paid without restoring reserved stock twice", async () => {
+  const product = await Product.create({
+    name: `Stripe paid test ${new Types.ObjectId().toString()}`,
+    description: "Stripe paid webhook integration test",
+    price: 15,
+    stock: 0,
+    image: ["https://example.com/product.png"],
+    category: new Types.ObjectId(),
+    brand: new Types.ObjectId(),
+  });
+  const order = await Order.create({
+    userId: new Types.ObjectId(),
+    items: [{
+      productId: product._id,
+      name: product.name,
+      price: 15,
+      quantity: 1,
+      image: "https://example.com/product.png",
+    }],
+    total: 15,
+    status: "pending",
+    stripeSessionId: "cs_test_paid",
+    shippingAddress: {
+      street: "Test street",
+      city: "Test city",
+      country: "Test country",
+      postalCode: "12345",
+    },
+  });
+
+  process.env.STRIPE_WEBHOOK_SYNC_SECRET = "integration-test-secret";
+  const app = express();
+  app.use(express.json());
+  app.use("/api/orders", orderRoutes);
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Test server did not bind a TCP port");
+    const endpoint = `http://127.0.0.1:${address.port}/api/orders/${order._id}/webhook-status`;
+    const payload = JSON.stringify({
+      status: "paid",
+      stripeSessionId: "cs_test_paid",
+      paymentIntentId: "pi_test_paid",
+    });
+    const sendPaidEvent = () => fetch(endpoint, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "x-webhook-secret": "integration-test-secret",
+      },
+      body: payload,
+    });
+
+    const firstResponse = await sendPaidEvent();
+    assert.equal(firstResponse.status, 200);
+    const duplicateResponse = await sendPaidEvent();
+    assert.equal(duplicateResponse.status, 200);
+
+    const refreshedProduct = await Product.findById(product._id);
+    const refreshedOrder = await Order.findById(order._id);
+    assert.equal(refreshedProduct?.stock, 0);
+    assert.equal(refreshedOrder?.status, "paid");
+    assert.equal(refreshedOrder?.paymentIntentId, "pi_test_paid");
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+});
