@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       metadata: { orderId },
       // Keep inventory reservations short; Stripe emits checkout.session.expired
       // when this hosted checkout expires.
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      expires_at: Math.floor(Date.now() / 1000) + 45 * 60,
       billing_address_collection: "auto",
     });
 
