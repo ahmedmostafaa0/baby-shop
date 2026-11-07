@@ -71,6 +71,10 @@ const orderSchema = new mongoose.Schema<IOrder>({
   },
   paidAt: {
     type: Date
+  },
+  reservationExpiresAt: {
+    type: Date,
+    index: true,
   }
 }, {timestamps: true});
 
