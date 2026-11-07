@@ -84,7 +84,7 @@ test("concurrent orders and duplicate cart rows cannot oversell inventory", asyn
 
   const duplicateResult = await invokeCreateOrder([
     { _id: duplicateProduct._id.toString(), quantity: 1 },
-    { _id: duplicateProduct._id.toString(), quantity: 1 },
+    { _id: duplicateProduct._id.toString().toUpperCase(), quantity: 1 },
   ]);
   assert.equal(duplicateResult.status, 409);
   assert.equal((await Product.findById(duplicateProduct._id))?.stock, 1);
