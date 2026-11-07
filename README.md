@@ -110,7 +110,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - **Authentication**: JWT (JSON Web Tokens)
 - **Security**: [bcrypt](https://github.com/kelektiv/node.bcrypt.js) for password hashing
 - **File Upload**: [Multer](https://github.com/expressjs/multer) + [Cloudinary](https://cloudinary.com/)
-- **Email**: [Nodemailer](https://nodemailer.com/)
 - **Payment**: [Stripe API](https://stripe.com/)
 - **API Docs**: [Swagger UI Express](https://github.com/scottie1984/swagger-ui-express)
 - **Async Handling**: [express-async-handler](https://github.com/Abourass/express-async-handler)
@@ -229,10 +228,6 @@ MONGO_URI=mongodb://localhost:27017/baby-shop?replicaSet=rs0
 # JWT
 JWT_ACCESS_SECRET=your_access_token_secret
 JWT_REFRESH_SECRET=your_refresh_token_secret
-
-# Email Service (Nodemailer)
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
