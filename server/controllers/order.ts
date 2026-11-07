@@ -193,10 +193,18 @@ const createOrderFromCart = asyncHandler(
           }
         }
 
-        const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const subtotal = Number(
+          orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2),
+        );
+        const shippingCost = subtotal > 100 ? 0 : 15;
+        const tax = Number((subtotal * 0.08).toFixed(2));
+        const total = Number((subtotal + shippingCost + tax).toFixed(2));
         createdOrder = new Order({
           userId: req.user!._id,
           items: orderItems,
+          subtotal,
+          shippingCost,
+          tax,
           total,
           status: "pending",
           reservationExpiresAt: new Date(Date.now() + 30 * 60 * 1000),
@@ -244,6 +252,9 @@ const getCheckoutSummary = asyncHandler(async (req: Request, res: Response) => {
   res.json({
     orderId: order._id,
     status: order.status,
+    subtotal: order.subtotal,
+    shippingCost: order.shippingCost,
+    tax: order.tax,
     total: order.total,
     items: order.items.map((item) => ({
       name: item.name,
