@@ -3,6 +3,7 @@ import { after, before, test } from "node:test";
 import mongoose, { Types } from "mongoose";
 import express from "express";
 import orderRoutes from "../routes/order";
+import { createOrderFromCart } from "../controllers/order";
 import Order from "../models/Order";
 import Product from "../models/Product";
 import { releaseExpiredUnstartedReservations } from "../utils/orderReservationCleanup";
@@ -18,6 +19,76 @@ before(async () => {
 
 after(async () => {
   await mongoose.disconnect();
+});
+
+test("concurrent orders and duplicate cart rows cannot oversell inventory", async () => {
+  const userId = new Types.ObjectId();
+  const shippingAddress = {
+    street: "Test street",
+    city: "Test city",
+    country: "Test country",
+    postalCode: "12345",
+  };
+  const invokeCreateOrder = (items: Array<{ _id: string; quantity: number }>) =>
+    new Promise<{ status: number; body?: unknown; error?: unknown }>((resolve) => {
+      const response = {
+        statusCode: 201,
+        status(code: number) {
+          this.statusCode = code;
+          return this;
+        },
+        json(body: unknown) {
+          resolve({ status: this.statusCode, body });
+          return this;
+        },
+      };
+      const request = {
+        body: { items, shippingAddress },
+        user: { _id: userId, role: "user" },
+      };
+      const next = (error: unknown) => resolve({ status: response.statusCode, error });
+      (createOrderFromCart as unknown as (
+        req: unknown,
+        res: unknown,
+        next: (error: unknown) => void,
+      ) => void)(request, response, next);
+    });
+
+  const concurrentProduct = await Product.create({
+    name: `Concurrent stock test ${new Types.ObjectId().toString()}`,
+    description: "Concurrent inventory reservation test",
+    price: 20,
+    stock: 1,
+    image: ["https://example.com/product.png"],
+    category: new Types.ObjectId(),
+    brand: new Types.ObjectId(),
+  });
+
+  const concurrentResults = await Promise.all([
+    invokeCreateOrder([{ _id: concurrentProduct._id.toString(), quantity: 1 }]),
+    invokeCreateOrder([{ _id: concurrentProduct._id.toString(), quantity: 1 }]),
+  ]);
+  assert.deepEqual(concurrentResults.map((result) => result.status).sort(), [201, 409]);
+  assert.equal((await Product.findById(concurrentProduct._id))?.stock, 0);
+  assert.equal(await Order.countDocuments({ "items.productId": concurrentProduct._id }), 1);
+
+  const duplicateProduct = await Product.create({
+    name: `Duplicate row test ${new Types.ObjectId().toString()}`,
+    description: "Duplicate cart row stock validation test",
+    price: 20,
+    stock: 1,
+    image: ["https://example.com/product.png"],
+    category: new Types.ObjectId(),
+    brand: new Types.ObjectId(),
+  });
+
+  const duplicateResult = await invokeCreateOrder([
+    { _id: duplicateProduct._id.toString(), quantity: 1 },
+    { _id: duplicateProduct._id.toString(), quantity: 1 },
+  ]);
+  assert.equal(duplicateResult.status, 409);
+  assert.equal((await Product.findById(duplicateProduct._id))?.stock, 1);
+  assert.equal(await Order.countDocuments({ "items.productId": duplicateProduct._id }), 0);
 });
 
 test("expired unstarted reservations restore stock exactly once", async () => {
