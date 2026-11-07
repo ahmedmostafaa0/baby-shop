@@ -331,6 +331,24 @@ npm run build
 
 ---
 
+## 🧪 Tests and CI
+
+Run the backend inventory and order-webhook integration tests against a MongoDB replica set:
+
+```bash
+cd server
+MONGO_URI="mongodb://localhost:27017/baby-shop-test?replicaSet=rs0" npm test
+```
+
+Run the signed Stripe webhook route tests (they use generated Stripe test signatures and a mocked backend sync):
+
+```bash
+cd client
+npm test
+```
+
+GitHub Actions runs dependency audits, TypeScript builds, frontend linting, the MongoDB-backed inventory tests, and the Stripe webhook tests on pull requests.
+
 ## 💻 Usage
 
 ### For Customers
