@@ -229,6 +229,10 @@ const getCheckoutSummary = asyncHandler(async (req: Request, res: Response) => {
     res.status(409);
     throw new Error("Only pending orders can be checked out");
   }
+  if (order.reservationExpiresAt && order.reservationExpiresAt.getTime() <= Date.now()) {
+    res.status(409);
+    throw new Error("This order's inventory reservation has expired; create a new order");
+  }
 
   const user = order.userId as IUser | null;
   const isAdmin = req.user?.role === "admin";
