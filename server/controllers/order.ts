@@ -270,9 +270,9 @@ const deleteOrder = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Order not found!");
   }
-  if (order.status === "pending") {
+  if (order.status !== "cancelled") {
     res.status(409);
-    throw new Error("Cancel pending orders before deleting them so reserved inventory can be restored");
+    throw new Error("Only cancelled orders can be deleted; paid and completed orders are retained for audit history");
   }
   await Order.deleteOne({ _id: order._id });
   res.json({ success: true, message: "Order deleted successfully" });
