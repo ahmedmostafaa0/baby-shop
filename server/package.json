@@ -8,7 +8,6 @@
   "scripts": {
     "dev": "nodemon --exec ts-node --files index.ts",
     "build": "tsc",
-    "swagger": "node utils/swagger.ts",
     "test": "node --test -r ts-node/register tests/*.test.ts"
   },
   "dependencies": {
@@ -33,12 +32,8 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^25.0.8",
     "@types/swagger-ui-express": "^4.1.8",
-    "swagger-autogen": "^2.23.7",
     "swagger-ui-express": "^5.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
-  },
-  "overrides": {
-    "deepmerge": "^4.3.2"
   }
 }
