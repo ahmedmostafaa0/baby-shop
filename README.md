@@ -178,7 +178,21 @@ Ensure you have the following installed on your system:
 
 ### Database requirement
 
-Order creation, checkout expiration, and inventory restoration use MongoDB multi-document transactions. The database **must support transactions** (MongoDB Atlas or a properly configured replica set). A standalone MongoDB server is not supported for this workflow. Do not run the checkout flow against a standalone local MongoDB instance.
+Order creation, checkout expiration, and inventory restoration use MongoDB multi-document transactions. The database **must support transactions** (MongoDB Atlas or a properly configured replica set). A standalone MongoDB server is not supported for this workflow. The API checks this at startup and exits with a clear error if the database is standalone.
+
+For local development, start MongoDB with replica-set mode enabled and initialize it once:
+
+```bash
+mongod --replSet rs0 --bind_ip localhost
+```
+
+In another terminal:
+
+```bash
+mongosh --eval "rs.initiate()"
+```
+
+Then use the local connection string shown in the Server environment section.
 
 ### Installation
 
