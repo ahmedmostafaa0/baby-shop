@@ -12,12 +12,15 @@ const connectDB = async () => {
       throw new Error("MongoDB connection is missing its database handle");
     }
     const topology = await database.admin().command({ hello: 1 });
-    if (typeof topology.setName !== "string") {
+    const isReplicaSet = typeof topology.setName === "string";
+    const isShardedCluster = topology.msg === "isdbgrid";
+    if (!isReplicaSet && !isShardedCluster) {
       throw new Error(
-        "MongoDB replica set is required: configure Atlas or a local replica set before starting the API",
+        "MongoDB transaction support is required: configure Atlas, a replica set, or a sharded cluster before starting the API",
       );
     }
-    console.log(`Mongo Connected: ${conn.connection.host} (replica set: ${topology.setName})`)
+    const topologyName = isReplicaSet ? topology.setName : "sharded cluster";
+    console.log(`Mongo Connected: ${conn.connection.host} (${topologyName})`)
   } catch (error) {
     if(error instanceof Error){
       console.log(`Error: ${error.message}`);
