@@ -4,6 +4,9 @@ import Stripe from "stripe";
 interface CheckoutSummary {
   orderId: string;
   status: "pending";
+  subtotal: number;
+  shippingCost: number;
+  tax: number;
   total: number;
   customerEmail?: string;
   items: Array<{
@@ -56,6 +59,12 @@ export async function POST(request: NextRequest) {
       summary.status !== "pending" ||
       !Array.isArray(summary.items) ||
       summary.items.length === 0 ||
+      !Number.isFinite(summary.subtotal) ||
+      summary.subtotal <= 0 ||
+      !Number.isFinite(summary.shippingCost) ||
+      summary.shippingCost < 0 ||
+      !Number.isFinite(summary.tax) ||
+      summary.tax < 0 ||
       !Number.isFinite(summary.total) ||
       summary.total <= 0
     ) {
@@ -86,26 +95,23 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const shipping = summary.total > 100 ? 0 : 15;
-    const tax = Number((summary.total * 0.08).toFixed(2));
-
-    if (shipping > 0) {
+    if (summary.shippingCost > 0) {
       lineItems.push({
         price_data: {
           currency: "usd",
           product_data: { name: "Shipping", description: "Standard shipping" },
-          unit_amount: Math.round(shipping * 100),
+          unit_amount: Math.round(summary.shippingCost * 100),
         },
         quantity: 1,
       });
     }
 
-    if (tax > 0) {
+    if (summary.tax > 0) {
       lineItems.push({
         price_data: {
           currency: "usd",
           product_data: { name: "Tax" },
-          unit_amount: Math.round(tax * 100),
+          unit_amount: Math.round(summary.tax * 100),
         },
         quantity: 1,
       });
