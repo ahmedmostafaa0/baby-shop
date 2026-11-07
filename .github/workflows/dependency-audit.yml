@@ -58,6 +58,8 @@ jobs:
             }));
           }
           NODE
+      - name: Enforce production dependency security
+        run: npm audit --omit=dev
       - name: Upload raw npm audit report
         uses: actions/upload-artifact@v4
         with:
