@@ -129,6 +129,9 @@ export async function POST(request: NextRequest) {
       cancel_url: `${origin}/cancel?orderId=${encodedOrderId}`,
       ...(summary.customerEmail ? { customer_email: summary.customerEmail } : {}),
       metadata: { orderId },
+      // Keep inventory reservations short; Stripe emits checkout.session.expired
+      // when this hosted checkout expires.
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       billing_address_collection: "auto",
     });
 
