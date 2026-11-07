@@ -373,7 +373,8 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     }
     const existing = await Order.findById(req.params.id);
     if (
-      existing?.stripeSessionId === stripeSessionId &&
+      existing &&
+      existing.stripeSessionId === stripeSessionId &&
       (existing.status === "cancelled" || existing.status === "paid" || existing.status === "completed")
     ) {
       res.json({
