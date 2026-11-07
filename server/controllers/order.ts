@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import mongoose from "mongoose";
 import asyncHandler from "express-async-handler";
 import Order from "../models/Order";
 import Product from "../models/Product";
@@ -122,19 +123,17 @@ const createOrderFromCart = asyncHandler(
       !shippingAddress.postalCode
     ) {
       res.status(400);
-      throw new Error(
-        "Shipping address is required with all fields (street, city, country, postalCode)",
-      );
+      throw new Error("Shipping address is required with all fields (street, city, country, postalCode)");
+    }
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Not authenticated");
     }
 
-    // Merge duplicate product rows before checking stock. Otherwise a client could
-    // submit the same product multiple times and bypass the per-row stock check.
     const requestedQuantities = new Map<string, number>();
-
     for (const item of items as { _id?: string; quantity?: number }[]) {
       const productId = item._id;
       const quantity = Number(item.quantity);
-
       if (
         typeof productId !== "string" ||
         !/^[a-fA-F0-9]{24}$/.test(productId) ||
@@ -142,11 +141,8 @@ const createOrderFromCart = asyncHandler(
         quantity < 1
       ) {
         res.status(400);
-        throw new Error(
-          "Each order item requires a valid product ID and positive integer quantity",
-        );
+        throw new Error("Each order item requires a valid product ID and positive integer quantity");
       }
-
       const combinedQuantity = (requestedQuantities.get(productId) ?? 0) + quantity;
       if (!Number.isSafeInteger(combinedQuantity)) {
         res.status(400);
@@ -155,59 +151,69 @@ const createOrderFromCart = asyncHandler(
       requestedQuantities.set(productId, combinedQuantity);
     }
 
-    const products = await Product.find({
-      _id: { $in: [...requestedQuantities.keys()] },
-    });
-    const productsById = new Map(
-      products.map((product) => [product._id.toString(), product]),
-    );
+    const session = await mongoose.startSession();
+    let createdOrder: InstanceType<typeof Order> | null = null;
+    try {
+      await session.withTransaction(async () => {
+        const products = await Product.find({
+          _id: { $in: [...requestedQuantities.keys()] },
+        }).session(session);
+        const productsById = new Map(products.map((product) => [product._id.toString(), product]));
 
-    if (productsById.size !== requestedQuantities.size) {
-      res.status(404);
-      throw new Error("One or more products could not be found");
-    }
-
-    const validateItems = [...requestedQuantities.entries()].map(
-      ([productId, quantity]) => {
-        const product = productsById.get(productId)!;
-
-        if (quantity > (product.stock ?? 0)) {
-          res.status(400);
-          throw new Error(
-            `Requested quantity for ${product.name} exceeds available stock`,
-          );
+        if (productsById.size !== requestedQuantities.size) {
+          res.status(404);
+          throw new Error("One or more products could not be found");
         }
 
-        const discountedPrice = Number(
-          (product.price * (1 - (product.discountPercentage || 0) / 100)).toFixed(2),
-        );
+        const orderItems = [...requestedQuantities.entries()].map(([productId, quantity]) => {
+          const product = productsById.get(productId)!;
+          const discountedPrice = Number(
+            (product.price * (1 - (product.discountPercentage || 0) / 100)).toFixed(2),
+          );
+          return {
+            productId: product._id,
+            name: product.name,
+            price: discountedPrice,
+            quantity,
+            image: product.image[0] || "",
+          };
+        });
 
-        return {
-          productId: product._id,
-          name: product.name,
-          price: discountedPrice,
-          quantity,
-          image: product.image[0] || "",
-        };
-      },
-    );
+        // Conditional decrements make stock reservation safe under concurrent orders.
+        for (const [productId, quantity] of requestedQuantities.entries()) {
+          const reservation = await Product.updateOne(
+            { _id: productId, stock: { $gte: quantity } },
+            { $inc: { stock: -quantity } },
+            { session },
+          );
+          if (reservation.modifiedCount !== 1) {
+            res.status(409);
+            throw new Error("Insufficient stock for one or more products");
+          }
+        }
 
-    const total = validateItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0,
-    );
-    if (!req.user) throw new Error("Not authenticated");
-    const order = await Order.create({
-      userId: req.user._id,
-      items: validateItems,
-      total,
-      status: "pending",
-      shippingAddress,
-    });
+        const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        createdOrder = new Order({
+          userId: req.user!._id,
+          items: orderItems,
+          total,
+          status: "pending",
+          shippingAddress,
+        });
+        await createdOrder.save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (!createdOrder) {
+      res.status(500);
+      throw new Error("Order could not be created");
+    }
     res.status(201).json({
       success: true,
-      order,
-      message: "Order created successfully",
+      order: createdOrder,
+      message: "Order created and inventory reserved successfully",
     });
   },
 );
@@ -258,84 +264,174 @@ const getOrderById = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const deleteOrder = asyncHandler(async (req: Request, res: Response) => {
-  const order = await Order.findByIdAndDelete(req.params.id);
+  const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
     throw new Error("Order not found!");
   }
-  res.json({
-    success: true,
-    message: "Order deleted successfully",
-  });
+  if (order.status === "pending") {
+    res.status(409);
+    throw new Error("Cancel pending orders before deleting them so reserved inventory can be restored");
+  }
+  await Order.deleteOne({ _id: order._id });
+  res.json({ success: true, message: "Order deleted successfully" });
 });
 
 const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
   const { status, paymentIntentId, stripeSessionId } = req.body || {};
-  if (!req.body) {
-    res.status(400).json({
-      success: false,
-      message: "Request body is missing",
-    });
-  }
-  const validStatues = ["pending", "paid", "completed", "cancelled"];
-  if (!validStatues.includes(status)) {
+  const validStatuses = ["pending", "paid", "completed", "cancelled"];
+  if (!validStatuses.includes(status)) {
     res.status(400);
-    throw new Error(
-      "Invalid status. Must be one of: pending, paid, completed, cancelled",
-    );
+    throw new Error("Invalid status. Must be one of: pending, paid, completed, cancelled");
   }
+
+  const isWebhook = !req.user;
+  if (isWebhook && (!stripeSessionId || typeof stripeSessionId !== "string")) {
+    res.status(400);
+    throw new Error("A valid Stripe session ID is required for webhook updates");
+  }
+  if (!isWebhook && req.user?.role !== "admin") {
+    res.status(403);
+    throw new Error("Only administrators can update order status");
+  }
+
+  if (isWebhook && status === "pending") {
+    const attached = await Order.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: "pending",
+        $or: [{ stripeSessionId: { $exists: false } }, { stripeSessionId: null }, { stripeSessionId }],
+      },
+      { $set: { stripeSessionId, updatedAt: new Date() } },
+      { new: true, runValidators: true },
+    );
+    if (!attached) {
+      res.status(409);
+      throw new Error("Order is not pending or already has a different checkout session");
+    }
+    res.json({ success: true, order: attached, message: "Stripe checkout session attached" });
+    return;
+  }
+
+  if (isWebhook && status === "paid") {
+    const paidOrder = await Order.findOneAndUpdate(
+      { _id: req.params.id, status: "pending", stripeSessionId },
+      {
+        $set: {
+          status: "paid",
+          paymentIntentId: typeof paymentIntentId === "string" ? paymentIntentId : undefined,
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (paidOrder) {
+      res.json({ success: true, order: paidOrder, message: "Order marked as paid" });
+      return;
+    }
+    const existing = await Order.findById(req.params.id);
+    if (existing?.status === "paid" && existing.stripeSessionId === stripeSessionId) {
+      res.json({ success: true, order: existing, message: "Payment event already processed" });
+      return;
+    }
+    res.status(409);
+    throw new Error("Order is not pending for this Stripe session");
+  }
+
+  if (isWebhook && status === "cancelled") {
+    const session = await mongoose.startSession();
+    let cancelledOrder: InstanceType<typeof Order> | null = null;
+    try {
+      await session.withTransaction(async () => {
+        cancelledOrder = await Order.findOneAndUpdate(
+          { _id: req.params.id, status: "pending", stripeSessionId },
+          { $set: { status: "cancelled", updatedAt: new Date() } },
+          { new: true, session },
+        );
+        if (!cancelledOrder) return;
+
+        for (const item of cancelledOrder.items) {
+          await Product.updateOne(
+            { _id: item.productId },
+            { $inc: { stock: item.quantity } },
+            { session },
+          );
+        }
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (cancelledOrder) {
+      res.json({ success: true, order: cancelledOrder, message: "Expired checkout cancelled and inventory restored" });
+      return;
+    }
+    const existing = await Order.findById(req.params.id);
+    if (existing?.status === "cancelled" && existing.stripeSessionId === stripeSessionId) {
+      res.json({ success: true, order: existing, message: "Expiration event already processed" });
+      return;
+    }
+    res.status(409);
+    throw new Error("Order is not pending for this Stripe session");
+  }
+
+  if (isWebhook) {
+    res.status(400);
+    throw new Error("Unsupported webhook status transition");
+  }
+
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
     throw new Error("Order not found!");
   }
 
-  if (req.user && req.user.role !== "admin") {
-    res.status(403);
-    throw new Error("Only administrators can update order status");
-  }
-
-  if (!req.user && status !== "paid") {
-    res.status(400);
-    throw new Error("Webhook updates may only mark an order as paid");
-  }
-
-  if (status === "paid" && !stripeSessionId) {
-    res.status(400);
-    throw new Error("Stripe session ID is required for paid orders");
-  }
-
-  if (status === "paid" && order.status !== "pending" && order.status !== "paid") {
-    res.status(409);
-    throw new Error("Only pending orders can be marked as paid");
-  }
-
-  const updateData: Update = {
-    status,
-    updatedAt: new Date(),
-  };
-
-  if (status === "paid") {
-    if (paymentIntentId) {
-      updateData.paymentIntentId = paymentIntentId;
+  if (status === "cancelled") {
+    if (order.status !== "pending") {
+      res.status(409);
+      throw new Error("Only pending orders can be cancelled without a refund");
     }
-    if (stripeSessionId) {
-      updateData.stripeSessionId = stripeSessionId;
+    const session = await mongoose.startSession();
+    let cancelledOrder: InstanceType<typeof Order> | null = null;
+    try {
+      await session.withTransaction(async () => {
+        cancelledOrder = await Order.findOneAndUpdate(
+          { _id: order._id, status: "pending" },
+          { $set: { status: "cancelled", updatedAt: new Date() } },
+          { new: true, session },
+        );
+        if (!cancelledOrder) {
+          res.status(409);
+          throw new Error("Order was already changed");
+        }
+        for (const item of cancelledOrder.items) {
+          await Product.updateOne(
+            { _id: item.productId },
+            { $inc: { stock: item.quantity } },
+            { session },
+          );
+        }
+      });
+    } finally {
+      await session.endSession();
     }
-    updateData.paidAt = new Date();
+    res.json({ success: true, order: cancelledOrder, message: "Order cancelled and inventory restored" });
+    return;
   }
 
-  const updatedOrder = await Order.findByIdAndUpdate(
-    req.params.id,
-    updateData,
-    { new: true, runValidators: true },
-  );
+  if (status === "completed" && order.status === "paid") {
+    const completed = await Order.findOneAndUpdate(
+      { _id: order._id, status: "paid" },
+      { $set: { status: "completed", updatedAt: new Date() } },
+      { new: true, runValidators: true },
+    );
+    res.json({ success: true, order: completed, message: "Order marked as completed" });
+    return;
+  }
 
-  res.json({
-    success: true,
-    order: updatedOrder,
-    message: `Order updated to ${status}`,
-  });
+  res.status(409);
+  throw new Error("Unsupported order status transition");
 });
 
 export {
