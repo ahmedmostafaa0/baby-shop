@@ -8,6 +8,27 @@ import Product from "../models/Product";
  * so concurrent API instances cannot restore the same reservation twice.
  */
 export async function releaseExpiredUnstartedReservations(): Promise<void> {
+  // Older pending orders predate inventory reservations. They must be cancelled
+  // without restoring stock because their creation never deducted it.
+  await Order.updateMany(
+    {
+      status: "pending",
+      $or: [
+        { reservationExpiresAt: { $exists: false } },
+        { reservationExpiresAt: null },
+      ],
+      $and: [
+        {
+          $or: [
+            { stripeSessionId: { $exists: false } },
+            { stripeSessionId: null },
+          ],
+        },
+      ],
+    },
+    { $set: { status: "cancelled", updatedAt: new Date() } },
+  );
+
   for (;;) {
     const session = await mongoose.startSession();
     let released = false;
