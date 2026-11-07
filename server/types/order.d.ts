@@ -27,6 +27,7 @@ export interface IOrder extends Document {
   paymentIntentId?: string
   stripeSessionId?: string
   paidAt?: Date
+  reservationExpiresAt?: Date
   createdAt?: Date;
   updatedAt?: Date;
 }
