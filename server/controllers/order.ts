@@ -198,6 +198,7 @@ const createOrderFromCart = asyncHandler(
           items: orderItems,
           total,
           status: "pending",
+          reservationExpiresAt: new Date(Date.now() + 30 * 60 * 1000),
           shippingAddress,
         });
         await createdOrder.save({ session });
