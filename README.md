@@ -343,14 +343,7 @@ npm run build
 
 ## 📚 API Documentation
 
-The project includes Swagger API documentation. Generate it using:
-
-```bash
-cd server
-npm run swagger
-```
-
-API documentation will be available at `http://localhost:5000/api/docs`
+The project includes a committed OpenAPI specification served through Swagger UI. Start the backend and open `http://localhost:5000/api/docs` to explore the API.
 
 ### Main API Endpoints
 
