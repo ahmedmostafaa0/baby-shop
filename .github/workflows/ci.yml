@@ -26,9 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Start MongoDB replica set for integration tests
-        uses: supercharge/mongodb-github-action@1.12.0
+        uses: supercharge/mongodb-github-action@1.12.1
         with:
-          mongodb-version: 7.0
+          mongodb-version: '7.0'
           mongodb-replica-set: test-rs
       - name: Test transactional inventory cleanup
         run: npm test
