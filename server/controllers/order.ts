@@ -372,8 +372,17 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
       return;
     }
     const existing = await Order.findById(req.params.id);
-    if (existing?.status === "cancelled" && existing.stripeSessionId === stripeSessionId) {
-      res.json({ success: true, order: existing, message: "Expiration event already processed" });
+    if (
+      existing?.stripeSessionId === stripeSessionId &&
+      (existing.status === "cancelled" || existing.status === "paid" || existing.status === "completed")
+    ) {
+      res.json({
+        success: true,
+        order: existing,
+        message: existing.status === "cancelled"
+          ? "Expiration event already processed"
+          : "Checkout was already paid; stale expiration event ignored",
+      });
       return;
     }
     res.status(409);
