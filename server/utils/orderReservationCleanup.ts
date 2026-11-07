@@ -13,6 +13,7 @@ export async function releaseExpiredUnstartedReservations(): Promise<void> {
     let released = false;
     try {
       await session.withTransaction(async () => {
+        released = false;
         const order = await Order.findOneAndUpdate(
           {
             status: "pending",
