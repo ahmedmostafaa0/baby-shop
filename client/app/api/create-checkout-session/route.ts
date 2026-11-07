@@ -132,6 +132,27 @@ export async function POST(request: NextRequest) {
       billing_address_collection: "auto",
     });
 
+    // Persist the exact session before returning its URL. This prevents another
+    // checkout session from being attached to the same inventory reservation.
+    const attachResponse = await fetch(`${apiEndpoint}/orders/${orderId}/webhook-status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "x-webhook-secret": syncSecret,
+      },
+      body: JSON.stringify({ status: "pending", stripeSessionId: session.id }),
+      cache: "no-store",
+    });
+
+    if (!attachResponse.ok) {
+      // Do not leave an untracked, payable Stripe session behind.
+      if (session.status === "open") {
+        await stripe.checkout.sessions.expire(session.id);
+      }
+      const detail = await attachResponse.text();
+      throw new Error(`Unable to attach Stripe session to order: ${attachResponse.status} ${detail}`);
+    }
+
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Stripe checkout error:", error);
