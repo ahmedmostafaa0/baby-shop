@@ -59,6 +59,7 @@ test("expired unstarted reservations restore stock exactly once", async () => {
     ...common,
     reservationExpiresAt: new Date(Date.now() + 60_000),
   });
+  const legacyOrder = await Order.create(common);
 
   // Simulate two API instances running the cleanup worker simultaneously.
   await Promise.all([
@@ -69,10 +70,12 @@ test("expired unstarted reservations restore stock exactly once", async () => {
   const refreshedProduct = await Product.findById(product._id);
   const refreshedExpiredOrder = await Order.findById(expiredOrder._id);
   const refreshedActiveOrder = await Order.findById(activeOrder._id);
+  const refreshedLegacyOrder = await Order.findById(legacyOrder._id);
 
   assert.equal(refreshedProduct?.stock, 1);
   assert.equal(refreshedExpiredOrder?.status, "cancelled");
   assert.equal(refreshedActiveOrder?.status, "pending");
+  assert.equal(refreshedLegacyOrder?.status, "cancelled");
 });
 
 test("expired Stripe webhook restores stock once and is idempotent", async () => {
