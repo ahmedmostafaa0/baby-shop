@@ -36,9 +36,27 @@ const orderSchema = new mongoose.Schema<IOrder>({
     required: true,
   },
   items: [orderItemSchema],
+  subtotal: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  shippingCost: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0,
+  },
+  tax: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 0,
+  },
   total: {
     type: Number,
-    default: 0,
+    required: true,
+    min: 0,
   },
   status: {
     type: String,
