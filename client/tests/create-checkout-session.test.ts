@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type Stripe from "stripe";
-import { NextRequest } from "next/server";
+import { NextRequest } from "next/server.js";
 import { createCheckoutSession } from "../app/api/create-checkout-session/route.ts";
 
 const orderId = "507f1f77bcf86cd799439011";
