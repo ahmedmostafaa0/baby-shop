@@ -20,7 +20,7 @@ export interface IOrderItem extends Document {
 }
 export interface IOrder extends Document {
   userId: Types.ObjectId | IUser;
-  items: IOrderItem[];
+  items: ICartItem[];
   subtotal?: number;
   shippingCost?: number;
   tax?: number;
