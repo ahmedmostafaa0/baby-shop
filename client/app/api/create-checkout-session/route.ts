@@ -95,6 +95,17 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    const calculatedTotalCents =
+      summary.items.reduce(
+        (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
+        0,
+      ) +
+      Math.round(summary.shippingCost * 100) +
+      Math.round(summary.tax * 100);
+    if (calculatedTotalCents !== Math.round(summary.total * 100)) {
+      throw new Error("Backend order total does not match checkout line items");
+    }
+
     if (summary.shippingCost > 0) {
       lineItems.push({
         price_data: {
