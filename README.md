@@ -72,7 +72,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - 📋 **Order Management**: Process and track orders
 - 📄 **Invoice Generation**: Export invoices as PDF
 - 📊 **Analytics Reports**: Detailed business analytics
-- 📤 **Bulk Upload**: Excel-based product upload
 
 ---
 
@@ -101,7 +100,6 @@ Baby Shop is a comprehensive e-commerce platform designed specifically for selli
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
 - **Charts**: [Recharts](https://recharts.org/)
 - **Export**: [html2canvas](https://html2canvas.hertzen.com/) + [jsPDF](https://github.com/parallax/jsPDF)
-- **Spreadsheet**: [XLSX](https://sheetjs.com/)
 
 ### Backend - API Server (Express.js)
 
