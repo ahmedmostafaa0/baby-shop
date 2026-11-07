@@ -1,13 +1,19 @@
 name: Dependency Remediation
 
 on:
+  push:
+    branches: [chore/portfolio-hardening]
+    paths:
+      - 'server/package.json'
+      - 'client/package.json'
+      - 'admin/package.json'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  remediate:
+  refresh-lockfiles:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,50 +22,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Apply non-breaking security updates
+      - name: Regenerate lockfiles from reviewed package constraints
         shell: bash
         run: |
           set -euo pipefail
           for app in server client admin; do
-            echo "=== Updating $app ==="
-            (cd "$app" && npm ci && (npm audit fix || true))
+            echo "=== Refreshing $app lockfile ==="
+            (cd "$app" && npm install --package-lock-only --ignore-scripts)
+            (cd "$app" && npm ci)
+            (cd "$app" && npm audit --omit=dev)
           done
-          # Nodemailer is not imported anywhere in the server source; remove the
-          # unused direct dependency instead of taking an unreviewed major upgrade.
-          (cd server && npm uninstall nodemailer && npm uninstall --save-dev @types/nodemailer)
-          # The app pins Next.js exactly, so update it explicitly to the patched
-          # release identified by npm audit, keeping Next and its ESLint config aligned.
-          cd client
-          npm install next@16.4.5 eslint-config-next@16.4.5
-          cd ../admin
-          # npm's xlsx package is stuck at vulnerable 0.18.5. Install the
-          # patched SheetJS release from its official CDN instead.
-          npm install --save https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
-      - name: Build and lint all workspaces
-        shell: bash
-        run: |
-          set -euo pipefail
-          (cd server && npm ci && npm run build)
-          (cd client && npm ci && npm run lint && NEXT_PUBLIC_SITE_URL=http://localhost:3000 NEXT_PUBLIC_API_ENDPOINT=http://localhost:5000/api NEXT_PUBLIC_API_URL=http://localhost:5000 NEXT_PUBLIC_APP_ENV=development STRIPE_SECRET_KEY=sk_test_ci_placeholder STRIPE_WEBHOOK_SECRET=whsec_ci_placeholder STRIPE_WEBHOOK_SYNC_SECRET=ci_placeholder_secret npm run build)
-          (cd admin && npm ci && npm run lint && npm run build)
-      - name: Commit dependency updates
+      - name: Commit refreshed lockfiles
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/package.json server/package-lock.json client/package.json client/package-lock.json admin/package.json admin/package-lock.json
+          git add server/package-lock.json client/package-lock.json admin/package-lock.json
           if git diff --cached --quiet; then
-            echo "No dependency changes to commit."
+            echo "Lockfiles are already up to date."
             exit 0
           fi
-          git commit -m "fix: remediate vulnerable dependencies"
+          git commit -m "chore(deps): refresh lockfiles with security overrides"
           git push origin chore/portfolio-hardening
-      - name: Report remaining advisories
-        if: always()
-        shell: bash
-        run: |
-          for app in server client admin; do
-            echo "=== Remaining audit findings: $app ==="
-            (cd "$app" && npm audit --omit=dev || true)
-          done
