@@ -24,7 +24,7 @@ export async function releaseExpiredUnstartedReservations(): Promise<void> {
             ],
           },
           { $set: { status: "cancelled", updatedAt: new Date() } },
-          { new: true, session },
+          { returnDocument: "after", session },
         );
 
         if (!order) return;
