@@ -304,7 +304,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
         $or: [{ stripeSessionId: { $exists: false } }, { stripeSessionId: null }, { stripeSessionId }],
       },
       { $set: { stripeSessionId, updatedAt: new Date() } },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!attached) {
       res.status(409);
@@ -325,7 +325,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
           updatedAt: new Date(),
         },
       },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (paidOrder) {
       res.json({ success: true, order: paidOrder, message: "Order marked as paid" });
@@ -351,7 +351,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
         cancelledOrder = await Order.findOneAndUpdate(
           { _id: req.params.id, status: "pending", stripeSessionId },
           { $set: { status: "cancelled", updatedAt: new Date() } },
-          { new: true, session },
+          { returnDocument: "after", session },
         );
         if (!cancelledOrder) return;
 
@@ -403,7 +403,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
         cancelledOrder = await Order.findOneAndUpdate(
           { _id: order._id, status: "pending" },
           { $set: { status: "cancelled", updatedAt: new Date() } },
-          { new: true, session },
+          { returnDocument: "after", session },
         );
         if (!cancelledOrder) {
           res.status(409);
@@ -428,7 +428,7 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     const completed = await Order.findOneAndUpdate(
       { _id: order._id, status: "paid" },
       { $set: { status: "completed", updatedAt: new Date() } },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     res.json({ success: true, order: completed, message: "Order marked as completed" });
     return;
