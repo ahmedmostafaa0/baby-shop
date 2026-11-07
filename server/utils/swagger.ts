@@ -5,11 +5,11 @@ const doc = {
     title: "Baby Shop API",
     description: "API backend endpoints for Baby Shop website",
   },
-  host: "localhost:8000",
+  host: "localhost:5000",
   schemes: ["http"],
   servers: [
     {
-      url: "http://localhost:8000",
+      url: "http://localhost:5000",
     },
   ],
   components: {
