@@ -340,7 +340,7 @@ cd server
 MONGO_URI="mongodb://localhost:27017/baby-shop-test?replicaSet=rs0" npm test
 ```
 
-Run the signed Stripe webhook route tests (they use generated Stripe test signatures and a mocked backend sync):
+Run the Stripe Checkout and webhook route tests (the Checkout tests use an injected Stripe test client and mocked backend responses; webhook tests use generated Stripe test signatures and a mocked backend sync):
 
 ```bash
 cd client
