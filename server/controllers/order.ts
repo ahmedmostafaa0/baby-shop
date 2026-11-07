@@ -411,7 +411,14 @@ const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     try {
       await session.withTransaction(async () => {
         cancelledOrder = await Order.findOneAndUpdate(
-          { _id: order._id, status: "pending" },
+          {
+            _id: order._id,
+            status: "pending",
+            $or: [
+              { stripeSessionId: { $exists: false } },
+              { stripeSessionId: null },
+            ],
+          },
           { $set: { status: "cancelled", updatedAt: new Date() } },
           { returnDocument: "after", session },
         );
