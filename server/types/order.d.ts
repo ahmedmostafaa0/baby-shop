@@ -21,7 +21,10 @@ export interface IOrderItem extends Document {
 export interface IOrder extends Document {
   userId: Types.ObjectId | IUser;
   items: ICartItem[];
-  total?: Number;
+  subtotal?: number;
+  shippingCost?: number;
+  tax?: number;
+  total?: number;
   status?: "pending" | "paid" | "completed" | "cancelled";
   shippingAddress: ShippingAddress;
   paymentIntentId?: string
