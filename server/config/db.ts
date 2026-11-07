@@ -7,7 +7,17 @@ const connectDB = async () => {
       throw new Error("Missing MongoDB connection string (MONGO_URI or MONGODB_URI)");
     }
     const conn = await mongoose.connect(mongoUri);
-    console.log(`Mongo Connected: ${conn.connection.host}`)
+    const database = conn.connection.db;
+    if (!database) {
+      throw new Error("MongoDB connection is missing its database handle");
+    }
+    const topology = await database.admin().command({ hello: 1 });
+    if (typeof topology.setName !== "string") {
+      throw new Error(
+        "MongoDB replica set is required: configure Atlas or a local replica set before starting the API",
+      );
+    }
+    console.log(`Mongo Connected: ${conn.connection.host} (replica set: ${topology.setName})`)
   } catch (error) {
     if(error instanceof Error){
       console.log(`Error: ${error.message}`);
